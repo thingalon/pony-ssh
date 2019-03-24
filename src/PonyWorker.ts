@@ -226,7 +226,10 @@ export class PonyWorker {
 
     private onParcel( type: ParcelType, body: Buffer ) {
         if ( ! this.parcelConsumer ) {
-            return this.onChannelError( new Error( 'Received parcel without a consumer waiting' ) );
+            const parcelTypeName = ParcelType[ type ];
+            const bodyJson = JSON.stringify( body );
+            const error = new Error( 'Received parcel without a consumer waiting: ' + parcelTypeName + ' ' + bodyJson );
+            return this.onChannelError( error );
         }
 
         const moreToReceive = this.parcelConsumer( type, body );
