@@ -43,6 +43,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
+		"maybecompile:worker": "if-newer src/worker/**/* out/worker.zip \"npm run compile:worker\"",
 		"compile:worker": "cd src/worker && bestzip ../../out/worker.zip *",
 		"compile:ts": "tsc -p ./",
 		"compile": "npm run compile:ts && npm run compile:worker",
@@ -53,6 +54,7 @@
 		"@types/node": "^10.12.21",
 		"@types/ssh2": "^0.5.38",
 		"bestzip": "^2.1.2",
+		"if-newer": "^1.0.2",
 		"tslint": "^5.12.1",
 		"typescript": "^3.3.1",
 		"vscode": "^1.1.28"

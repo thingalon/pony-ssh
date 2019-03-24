@@ -4,6 +4,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "watch:ts",
 			"type": "npm",
 			"script": "watch",
 			"problemMatcher": "$tsc-watch",
@@ -15,6 +16,26 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "maybecompile:worker",
+			"type": "npm",
+			"script": "maybecompile:worker",
+			"isBackground": false,
+			"presentation": {
+				"reveal": "always"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "buildall",
+			"dependsOn": [
+				"maybecompile:worker",
+				"watch"
+			]
 		}
 	]
 }
