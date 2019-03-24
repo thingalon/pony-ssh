@@ -43,7 +43,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
-		"maybecompile:worker": "if-newer src/worker/**/* out/worker.zip \"npm run compile:worker\"",
+		"maybecompile:worker": "mkdirp out && if-newer \"src/worker/**/*\" out/worker.zip \"npm run compile:worker\"",
 		"compile:worker": "cd src/worker && bestzip ../../out/worker.zip *",
 		"compile:ts": "tsc -p ./",
 		"compile": "npm run compile:ts && npm run compile:worker",
