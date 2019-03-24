@@ -180,6 +180,9 @@ def handleFileRead(args):
     length = os.path.getsize(path)
     sendResponseHeader({'length': length})
 
+    if length == 0:
+        return
+
     chunkSize = 200 * 1024
     while True:
         chunk = fh.read(chunkSize)
