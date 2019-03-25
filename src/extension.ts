@@ -19,12 +19,14 @@ export function activate( context: vscode.ExtensionContext ) {
 			return;
 		}
 
+		const defaultPath = availableHosts[ host ].path || '~';
+
 		// Ask user to enter remote path
 		let remotePath = await vscode.window.showInputBox( {
-			placeHolder: 'Remote path. Default: ~/',
+			placeHolder: 'Remote path. Default: ' + defaultPath,
 		} );
 		if ( '' === remotePath ) {
-			remotePath = '~';
+			remotePath = defaultPath;
 		}
 		if ( ! remotePath ) {
 			return;

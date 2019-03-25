@@ -26,7 +26,8 @@ For example:
  "ponyssh.hosts": { 
         "example": {
             "host": "example.com",
-            "username": "mylogin"
+            "username": "mylogin",
+            "path": "/srv/www"
         },
         "something-else": {
             "host": "another-host.example.com",
@@ -42,6 +43,7 @@ The following host configuration options are accepted:
 - `username` - Username for authentication
 - `password` - Password for authentication
 - `agent` - Specify agent or UNIX socket to use. Generally `"pageant"` on Windows, or `$SSH_AUTH_SOCK` on POSIX systems.
+- `path` - The default path to use when opening a folder on this host.
 
 If you don't specify a `password` or `agent` in your host configuration, Pony SSH will automatically try to use a sensible platform-specific default. (eg: `pageant` or `$SSH_AUTH_SOCK`).
 

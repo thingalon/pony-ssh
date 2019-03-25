@@ -8,6 +8,7 @@ export interface HostConfig {
     host: string;
     username: string;
     agent?: string;
+    path?: string;
 }
 
 export class Host {
