@@ -112,6 +112,7 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
                 "host": configHost.host,
                 "username": configHost.username,
                 "agent": configHost.agent || ( configHost.password ? undefined : defaultAgent ),
+                "path": configHost.path,
             };
         }
 
