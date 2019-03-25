@@ -31,8 +31,9 @@ export function activate( context: vscode.ExtensionContext ) {
 		}
 
 		const fullPath = 'ponyssh:/' + host + ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
+		const name = host + ':' + ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
 		const newFolder = {
-			name: fullPath,
+			name,
 			uri: vscode.Uri.parse( fullPath ),
 		};
 
