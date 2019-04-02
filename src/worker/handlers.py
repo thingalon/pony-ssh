@@ -6,16 +6,25 @@ import stat
 
 from definitions import Opcode, ParcelType
 from errors import Error
-from tools import processStat
-from protocol import sendResponseHeader, sendParcel, sendEmptyParcel, sendError
+from tools import process_stat
+from protocol import send_response_header, send_parcel, send_empty_parcel, send_error
 
-def handleLs(args):
-    base = os.path.expanduser(args['path'])
+def handle_expand_path(args):
+    path = os.path.expanduser(args['path'])
+    if not os.path.exists(path):
+        send_error(Error.ENOENT, 'Path not found')
+    elif not os.path.isdir(path):
+        send_error(Error.ENOTDIR, 'Not a directory')
+    else:
+        send_response_header({'path': path})
+
+def handle_ls(args):
+    base = args['path']
     selfStat = os.stat(base)
 
-    result = { 'stat': processStat(selfStat) }
+    result = { 'stat': process_stat(selfStat) }
     if not stat.S_ISDIR(selfStat[stat.ST_MODE]):
-        sendResponseHeader(result)
+        send_response_header(result)
         return
 
     dirs = {}
@@ -37,7 +46,7 @@ def handleLs(args):
                     break
 
                 childStat = os.stat(os.path.join(absPath, childName))
-                children[childName] = processStat(childStat)
+                children[childName] = process_stat(childStat)
 
                 isDir = stat.S_ISDIR(childStat[stat.ST_MODE])
                 if isDir and len(explore) < dirLimit:
@@ -51,9 +60,9 @@ def handleLs(args):
                 raise err # Only raise read errors on the first item.
 
     result['dirs'] = dirs
-    sendResponseHeader(result)
+    send_response_header(result)
 
-def handleGetServerInfo(args):
+def handle_get_server_info(args):
     settingsPath = os.path.expanduser('~/.pony-ssh/')
     if not os.path.exists(settingsPath):
         os.makedirs(settingsPath)
@@ -72,16 +81,16 @@ def handleGetServerInfo(args):
         with open(cacheKeyFile, "w") as keyFileHandle:
             keyFileHandle.write(cacheKey)
 
-    sendResponseHeader({ 'cacheKey': cacheKey, 'newCacheKey': cacheKeyIsNew })
+    send_response_header({ 'cacheKey': cacheKey, 'newCacheKey': cacheKeyIsNew })
 
-def handleFileRead(args):
-    path = os.path.expanduser(args['path'])
+def handle_file_read(args):
+    path = args['path']
 
     # Open the file before sending a response header
     fh = open(path, 'r')
 
     length = os.path.getsize(path)
-    sendResponseHeader({'length': length})
+    send_response_header({'length': length})
 
     if length == 0:
         return
@@ -91,14 +100,14 @@ def handleFileRead(args):
         chunk = fh.read(chunkSize)
         if not chunk:
             break
-        sendParcel(ParcelType.BODY, chunk)
+        send_parcel(ParcelType.BODY, chunk)
 
     fh.close()
 
-    sendParcel(ParcelType.ENDOFBODY, '')
+    send_parcel(ParcelType.ENDOFBODY, '')
 
-def handleFileWrite(args):
-    path = os.path.expanduser(args['path'])
+def handle_file_write(args):
+    path = args['path']
 
     alreadyExists = os.path.exists(path)
     if alreadyExists and not args['overwrite']:
@@ -110,24 +119,24 @@ def handleFileWrite(args):
     fh.write(args['data'])
     fh.close()
 
-    sendResponseHeader({})
+    send_response_header({})
 
-def handleMkdir(args):
-    path = os.path.expanduser(args['path'])
+def handle_mkdir(args):
+    path = args['path']
     os.mkdir(path)
-    sendResponseHeader({})
+    send_response_header({})
 
-def handleDelete(args):
-    path = os.path.expanduser(args['path'])
+def handle_delete(args):
+    path = args['path']
     if os.path.isdir(path) and not os.path.islink(path):
         shutil.rmtree(path)
     else:
         os.remove(path)
-    sendResponseHeader({})
+    send_response_header({})
 
-def handleRename(args):
-    fromPath = os.path.expanduser(args['from'])
-    toPath = os.path.expanduser(args['to'])
+def handle_rename(args):
+    fromPath = args['from']
+    toPath = args['to']
 
     if os.path.exists(toPath):
         if args['overwrite']:
@@ -136,14 +145,15 @@ def handleRename(args):
             raise OSError(Error.EEXIST, 'File already exists')
 
     os.rename(fromPath, toPath)
-    sendResponseHeader({})
+    send_response_header({})
 
-messageHandlers = {
-    Opcode.LS:              handleLs,
-    Opcode.GET_SERVER_INFO: handleGetServerInfo,
-    Opcode.FILE_READ:       handleFileRead,
-    Opcode.FILE_WRITE:      handleFileWrite,
-    Opcode.MKDIR:           handleMkdir,
-    Opcode.DELETE:          handleDelete,
-    Opcode.RENAME:          handleRename,
+message_handlers = {
+    Opcode.LS:              handle_ls,
+    Opcode.GET_SERVER_INFO: handle_get_server_info,
+    Opcode.FILE_READ:       handle_file_read,
+    Opcode.FILE_WRITE:      handle_file_write,
+    Opcode.MKDIR:           handle_mkdir,
+    Opcode.DELETE:          handle_delete,
+    Opcode.RENAME:          handle_rename,
+    Opcode.EXPAND_PATH:     handle_expand_path,
 }

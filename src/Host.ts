@@ -11,15 +11,31 @@ export interface HostConfig {
     path?: string;
 }
 
+type ChangeCallback = ( host: string, path: string, type: vscode.FileChangeType ) => void;
+
+// TODO: On re-connection after lost connections, re-establish previously requested watches.
+interface HostWatch {
+    path: string;
+    options: { recursive: boolean, excludes: string[] };
+    callback: ChangeCallback;
+}
+
 export class Host {
 
+    public config: HostConfig;
+
+    private name: string;
     private connection: Connection;
     private directoryCache: DirectoryCache;
     private connectionPromise: Promise<void> | undefined;
+    private activeWatches: { [key: number]: HostWatch };
 
-    constructor( config: HostConfig ) {
-        this.connection = new Connection( config );
+    constructor( name: string, config: HostConfig ) {
+        this.name = name;
+        this.config = config;
+        this.connection = new Connection( this );
         this.directoryCache = new DirectoryCache();
+        this.activeWatches = {};
     }
 
     public async connect() {
@@ -30,7 +46,12 @@ export class Host {
         return this.connectionPromise;
     }
 
-    public async stat( priority: number, remotePath: string ) : Promise<vscode.FileStat> {
+    public async expandPath( priority: number, remotePath: string ): Promise<string> {
+        await this.connect();
+        return await this.connection.expandPath( priority, remotePath );
+    }
+
+    public async stat( priority: number, remotePath: string ): Promise<vscode.FileStat> {
         await this.connect();
 
         const cachedStat = this.directoryCache.getStat( remotePath );
@@ -93,11 +114,40 @@ export class Host {
         await this.connection.mkdir( priority, remotePath );
     }
 
+    public async addWatch( id: number, path: string, options: { recursive: boolean, excludes: string[] }, callback: ChangeCallback ) {
+        this.activeWatches[ id ] = {
+            path: path,
+            options: options,
+            callback: callback
+        };
+
+        await this.connect();
+        await this.connection.addWatch( id, path, options );
+    }
+
+    public async rmWatch( id: number ) {
+        if ( this.activeWatches[ id ] ) {
+            delete this.activeWatches[ id ];
+        }
+
+        await this.connect();
+        await this.connection.rmWatch( id );
+    }
+
     private async cacheLs( priority: number, remotePath: string ) {
         const response = await this.connection.ls( priority, remotePath );
         this.directoryCache.setStat( remotePath, this.directoryCache.parseStat( response.stat ) );
         for ( const dir in response.dirs ) {
             this.directoryCache.setListing( path.posix.join( remotePath, dir ), response.dirs[ dir ] );
+        }
+    }
+
+    public handleChangeNotice( watchId: number, path: string, type: vscode.FileChangeType ) {
+        this.directoryCache.clearStat( path );
+        this.directoryCache.clearListing( path.split( '/' ).slice( 0, -1 ).join( '/' ) );
+
+        if ( this.activeWatches[ watchId ] ) {
+            this.activeWatches[ watchId ].callback( this.name, path, type );
         }
     }
 

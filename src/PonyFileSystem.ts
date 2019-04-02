@@ -1,21 +1,25 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { Host, HostConfig } from './Host';
-import { hostname } from 'os';
 
 export class PonyFileSystem implements vscode.FileSystemProvider {
 
     private availableHosts: { [name: string]: HostConfig };
     private activeHosts: { [name: string]: Host };
+    private nextWatchId: number;
 
-    private emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
-    private bufferedEvents: vscode.FileChangeEvent[] = [];
+    private emitter: vscode.EventEmitter<vscode.FileChangeEvent[]>;
+    private bufferedEvents: vscode.FileChangeEvent[];
     private fireSoonHandle?: NodeJS.Timer;
-    readonly onDidChangeFile: vscode.Event<vscode.FileChangeEvent[]> = this.emitter.event;
+    readonly onDidChangeFile: vscode.Event<vscode.FileChangeEvent[]>;
 
     constructor( context: vscode.ExtensionContext ) {
+        this.emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+        this.bufferedEvents = [];
+        this.onDidChangeFile = this.emitter.event;
+
         this.activeHosts = {};
         this.availableHosts = this.loadHostConfigs();
+        this.nextWatchId = 1;
     }
 
     public getAvailableHosts() {
@@ -78,9 +82,33 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         this.fireSoon( { type: vscode.FileChangeType.Created, uri } );
     }
 
-    public watch( resource: vscode.Uri, opts: any ): vscode.Disposable {
-        // TODO.
-        return new vscode.Disposable( () => {} );
+    public watch( uri: vscode.Uri, options: { recursive: boolean, excludes: string[] } ): vscode.Disposable {
+        const [ host, remotePath ] = this.splitPath( uri.path );
+        const watchId = this.nextWatchId++;
+        const addPromise = host.addWatch( watchId, remotePath, options, this.handleFileChange.bind( this ) );
+
+        addPromise.catch( ( err ) => {
+            vscode.window.showWarningMessage( 'Failed to watch path: ' + err.message, { modal: false } );
+        } );
+
+        return new vscode.Disposable( () => {
+            host.rmWatch( watchId );
+        } );
+    }
+    
+    public handleFileChange( host: string, remotePath: string, type: vscode.FileChangeType ) {
+        const fullPath = 'ponyssh:/' + host + ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
+        const uri = vscode.Uri.parse( fullPath );
+
+        this.fireSoon( { type, uri } );
+    }
+
+    public getActiveHost( name: string ): Host {
+        if ( ! this.activeHosts[ name ] ) {
+            this.activeHosts[ name ] = new Host( name, this.availableHosts[ name ] );
+        }
+
+        return this.activeHosts[ name ];
     }
 
     private splitPath( fullPath: string ): [ Host, string ] {
@@ -92,11 +120,8 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
             throw vscode.FileSystemError.FileNotFound( fullPath );
         }
 
-        if ( ! this.activeHosts[ hostName ] ) {
-            this.activeHosts[ hostName ] = new Host( this.availableHosts[ hostName ] );
-        }
-
-        return [ this.activeHosts[ hostName ], remotePath ];
+        const host = this.getActiveHost( hostName );
+        return [ host, remotePath ];
     }
 
     private loadHostConfigs(): { [name: string]: HostConfig } {

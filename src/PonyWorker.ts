@@ -2,11 +2,10 @@ import { Connection } from "./Connection";
 import { Channel } from "ssh2";
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
-import { formatWithOptions } from "util";
 
 type BufferSource = Buffer;
 
-enum Opcode {
+export enum Opcode {
     LS              = 0x01,
     GET_SERVER_INFO = 0x02,
     FILE_READ       = 0x03,
@@ -14,13 +13,21 @@ enum Opcode {
     MKDIR           = 0x05,
     DELETE          = 0x06,
     RENAME          = 0x07,
+    EXPAND_PATH     = 0x08,
+    ADD_WATCH       = 0x10,
+    REMOVE_WATCH    = 0x11,
 }
 
-enum ParcelType {
+export enum ParcelType {
+    // Request responses
     HEADER    = 0x01,
     BODY      = 0x02,
     ERROR     = 0x03,
-    ENDOFBODY = 0x04
+    ENDOFBODY = 0x04,
+
+    // Push notifications
+    WARNING       = 0x05,
+    CHANGE_NOTICE = 0x06,
 }
     
 const headerSizes: { [size: number]: number } = {
@@ -39,7 +46,7 @@ type BodyCB = ( data: Buffer ) => void;
 
 export class PonyWorker {
 
-    private connection: Connection;
+    protected connection: Connection;
     private channel: Channel;
     private readBuffer : Buffer;
     private bufferMsgSize: number | undefined;
@@ -60,6 +67,11 @@ export class PonyWorker {
 
     public async getServerInfo(): Promise<ParcelChunk> {
         return await this.get( Opcode.GET_SERVER_INFO, {} );
+    }
+
+    public async expandPath( remotePath: string ): Promise<string> {
+        const response = await this.get( Opcode.EXPAND_PATH, { path: remotePath } );
+        return response.path;
     }
 
     public async ls( path: string ) {
@@ -112,7 +124,7 @@ export class PonyWorker {
             while ( this.readBuffer.length >= 2 ) {
                 // First byte defines parcel type. Make sure it looks valid.
                 const parcelType = this.readBuffer[0] as ParcelType;
-                if ( parcelType > ParcelType.ENDOFBODY ) {
+                if ( parcelType > ParcelType.CHANGE_NOTICE ) {
                     throw new Error( 'Invalid parcel type: ' + parcelType );
                 }
 
@@ -184,6 +196,10 @@ export class PonyWorker {
                             reject( new Error( 'End of Body without a header' ) );
                         }
                         return false;
+                    
+                    default:
+                        console.warn( 'Unexpected parcel type: ' + type );
+                        return false;
                 }
             } );
 
@@ -199,7 +215,7 @@ export class PonyWorker {
         this.parcelConsumer = consumer;
     }
 
-    private sendMessage( opcode: Opcode, args: any ) {
+    protected sendMessage( opcode: Opcode, args: any ) {
         const data = this.packMessage( opcode, args );
         this.channel.write( data );
     }
@@ -224,7 +240,7 @@ export class PonyWorker {
         this.onChannelError( new Error( 'Unexpected end of worker channel' ) );
     }
 
-    private onParcel( type: ParcelType, body: Buffer ) {
+    protected onParcel( type: ParcelType, body: Buffer ) {
         if ( ! this.parcelConsumer ) {
             const parcelTypeName = ParcelType[ type ];
             const bodyJson = JSON.stringify( body );

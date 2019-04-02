@@ -22,7 +22,7 @@ export class DirectoryCache {
 
         this.listCache = new NodeCache( {
             stdTTL: 10,
-            checkperiod: 10,
+            checkperiod: 120,
         } );
     }
 
@@ -38,6 +38,10 @@ export class DirectoryCache {
         this.statCache.set( this.normalizePath( statPath ), stat );
     }
 
+    public clearStat( statPath: string ) {
+        this.statCache.del( this.normalizePath( statPath ) );
+    }
+
     public getListing( basePath: string ): [string, vscode.FileType][] | undefined {
         return this.listCache.get( this.normalizePath( basePath ) );
     }
@@ -51,6 +55,10 @@ export class DirectoryCache {
         }
 
         this.listCache.set( this.normalizePath( basePath ), listing );
+    }
+
+    public clearListing( basePath: string ) {
+        this.listCache.del( this.normalizePath( basePath ) );
     }
 
     public parseStat( rawStat: number[] ): vscode.FileStat {

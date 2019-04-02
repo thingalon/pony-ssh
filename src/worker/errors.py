@@ -25,7 +25,7 @@ class CodedError(Exception):
         self.code = code
         self.message = message
 
-def processError(osError):
+def process_error(osError):
     return {
         0:             Error.OK,
         errno.EPERM:   Error.EPERM,

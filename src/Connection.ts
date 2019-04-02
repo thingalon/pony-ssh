@@ -1,8 +1,9 @@
-import { HostConfig } from "./Host";
-import { Client} from 'ssh2';
+import { HostConfig, Host } from "./Host";
+import { Client, Channel} from 'ssh2';
 import { WorkerScript } from "./WorkerScript";
 import { PonyWorker } from "./PonyWorker";
 import { PriorityPool } from "./PriorityPool";
+import { WatchWorker } from "./WatchWorker";
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = '' +
@@ -37,13 +38,16 @@ interface ServerInfo {
 
 export class Connection {
 
+    public host: Host;
     private config: HostConfig;
     private client: Client;
     private serverInfo?: ServerInfo;
+    private watchWorker?: WatchWorker;
     private workers: PriorityPool<PonyWorker>;
     
-    constructor( config: HostConfig ) {
-        this.config = config;
+    constructor( host: Host ) {
+        this.host = host;
+        this.config = host.config;
 
         this.workers = new PriorityPool<PonyWorker>();
         
@@ -63,12 +67,15 @@ export class Connection {
 
             // Open one primary worker.
             console.log( 'Starting workers...' );
-            const worker = await this.startWorker();
-
-            // Grab server info.
-            console.log( 'Examining server...' );
-            this.serverInfo = await this.getServerInfo( worker );
+            const channel = await this.startWorkerChannel();
+            const worker = new PonyWorker( this, channel );
             
+            // Start a secondary worker for Watching, grab server info. Can be done in parallel(ish)
+            const promises: Promise<void>[] = [];
+            promises.push( this.startWatcher() );
+            promises.push( this.getServerInfo( worker ) );
+            await Promise.all( promises );
+
             // Put primary worker into the pool
             this.workers.add( worker );
 
@@ -95,10 +102,10 @@ export class Connection {
         }
     }
 
-    private async getServerInfo( worker: PonyWorker ): Promise<ServerInfo> {
+    private async getServerInfo( worker: PonyWorker ): Promise<void> {
         const rawServerInfo = await worker.getServerInfo();
 
-        return {
+        this.serverInfo = {
             cacheKey: rawServerInfo.cacheKey as string,
             newCacheKey: rawServerInfo.newCacheKey as boolean
         };  
@@ -106,6 +113,12 @@ export class Connection {
 
     public close() {
         // TODO: Clean up the connection here.
+    }
+
+    public async expandPath( priority: number, remotePath: string ) {
+        return await this.workerDo( priority, async ( worker: PonyWorker ) => {
+            return await worker.expandPath( remotePath );
+        } );
     }
 
     public async ls( priority: number, path: string ) {
@@ -142,6 +155,18 @@ export class Connection {
         return await this.workerDo( priority, async ( worker: PonyWorker ) => {
             return await worker.mkdir( remotePath );
         } );
+    }
+
+    public async addWatch( id: number, path: string, options: { recursive: boolean, excludes: string[] } ) {
+        if ( this.watchWorker ) {
+            await this.watchWorker.addWatch( id, path, options );
+        }
+    }
+
+    public async rmWatch( id: number ) {
+        if ( this.watchWorker ) {
+            await this.watchWorker.rmWatch( id );
+        }
     }
 
     public async workerDo( priority: number, fn: ( worker: PonyWorker ) => Promise<any> ) {
@@ -263,9 +288,9 @@ export class Connection {
         } );
     }
 
-    private async startWorker(): Promise<PonyWorker> {
-        return new Promise<PonyWorker>( ( resolve, reject ) => {
-            const pythonCommand = 'python ~/.pony-ssh/worker.zip';
+    private async startWorkerChannel( args: string[] = [] ): Promise<Channel> {
+        return new Promise<Channel>( ( resolve, reject ) => {
+            const pythonCommand = 'python ~/.pony-ssh/worker.zip ' + shellEscape( args );
             const shellCommand = shellEscape( [ 'sh', '-c', pythonCommand ] );
 
             this.client.exec( shellCommand, async ( err, channel ) => {
@@ -273,8 +298,7 @@ export class Connection {
                    return reject( err );
                 }
 
-                const worker = new PonyWorker( this, channel );
-                resolve( worker );
+                resolve( channel );
             } );
         } );
     }
@@ -282,11 +306,22 @@ export class Connection {
     private async startSecondaryWorkers() {
         for ( let i = 0; i < 4; i++ ) {
             try {
-                const worker = await this.startWorker();
+                const channel = await this.startWorkerChannel();
+                const worker = new PonyWorker( this, channel );
                 this.workers.add( worker );
             } catch ( err ) {
                 break;
             }
+        }
+    }
+
+    private async startWatcher() {
+        try {
+            const channel = await this.startWorkerChannel( [ 'watcher' ] );
+            this.watchWorker = new WatchWorker( this, channel );
+            console.log( 'Started watchWorker' );
+        } catch ( err ) {
+            console.warn( 'Failed to open worker for watching file changes: ' + err.message );
         }
     }
 
