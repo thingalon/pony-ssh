@@ -1,4 +1,3 @@
-import { ClientHttp2Session } from "http2";
 import { Connection } from "./Connection";
 import { DirectoryCache } from "./DirectoryCache";
 import * as vscode from 'vscode';
@@ -111,10 +110,7 @@ export class Host {
 
         if ( content instanceof Uint8Array ) {
             // Do not await setFile; it may be slow (it uses crypto.randomBytes)
-            this.directoryCache.setFile( remotePath, content ).then( ( err ) => {
-                // Should not happen; setFile has its own try/catch block.
-                console.error( err );
-            } );
+            this.directoryCache.setFile( remotePath, content );
 
             return content;
         } else if ( content === HashMatch ) {
@@ -126,7 +122,22 @@ export class Host {
 
     public async writeFile( priority: number, remotePath: string, data: Uint8Array, options: { create: boolean, overwrite: boolean } ) {
         await this.connect();
+
+        // See if this save can be abbreviated using a diff.
+        if ( options.overwrite ) {
+            const originalContent = await this.directoryCache.getFile( remotePath );
+            if ( originalContent ) {
+                try {
+                    await this.connection.writeFileDiff( priority, remotePath, originalContent, data );
+                    this.directoryCache.setFile( remotePath, data );
+                } catch ( err ) {
+                    console.warn( 'Saving w/ diffing failed, going to retry with full write: ' + err.message );
+                }
+            }
+        }
+
         await this.connection.writeFile( priority, remotePath, data, options );
+        this.directoryCache.setFile( remotePath, data );
     }
 
     public async rename( priority: number, fromPath: string, toPath: string, options: { overwrite: boolean } ) {

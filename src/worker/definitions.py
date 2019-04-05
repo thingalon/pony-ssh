@@ -18,8 +18,14 @@ class Opcode:
     DELETE          = 0x06
     RENAME          = 0x07
     EXPAND_PATH     = 0x08
+    FILE_WRITE_DIFF = 0x09
     ADD_WATCH       = 0x10
     REMOVE_WATCH    = 0x11
+
+class DiffAction:
+    UNCHANGED = 0x00
+    INSERTED  = 0x01
+    REMOVED   = 0x02
 
 class FileType:
     FILE      = 0x01

@@ -4,9 +4,10 @@ import logging
 import os
 import shutil
 import stat
+import tempfile
 
-from definitions import Opcode, ParcelType
-from errors import Error
+from definitions import Opcode, ParcelType, DiffAction
+from errors import Error, CodedError
 from tools import process_stat
 from protocol import send_response_header, send_parcel, send_empty_parcel, send_error
 
@@ -116,6 +117,45 @@ def handle_file_read(args):
 
     send_parcel(ParcelType.ENDOFBODY, '')
 
+def handle_file_write_diff(args):
+    path = args['path']
+
+    if not os.path.exists(path):
+        raise OSError(Error.ENOENT, 'File not found')
+
+    with open(path, 'r') as fh:
+        original_data = fh.read()
+
+    original_hash = hashlib.md5(original_data).hexdigest()
+    if original_hash != args['hashBefore']:
+        raise CodedError(Error.EIO, 'File hash does not match client cached value: ' + args['hashBefore'] + ' vs ' + original_hash)
+
+    # Apply diff; comes in as a flat array containing pairs; action, action data.
+    updated_data = b''
+    read_cursor = 0
+    diff = args['diff']
+    for i in range(0, len(diff), 2):
+        action = diff[i]
+        action_data = diff[i + 1]
+
+        if action == DiffAction.INSERTED:
+            updated_data += action_data # Action data contains new data inserted
+        elif action == DiffAction.REMOVED:
+            read_cursor += action_data # Action data contains number of bytes to remove
+        else:
+            # Action data contains number of bytes to copy from original
+            updated_data += original_data[read_cursor:read_cursor+action_data]
+            read_cursor += action_data
+
+    updated_hash = hashlib.md5(updated_data).hexdigest()
+    if updated_hash != args['hashAfter']:
+        raise CodedError(Error.EINVAL, 'File hash after changes applied does not match expected')
+
+    with open(path, 'w') as fh:
+        fh.write(updated_data)
+
+    send_response_header({})
+
 def handle_file_write(args):
     path = args['path']
 
@@ -166,4 +206,5 @@ message_handlers = {
     Opcode.DELETE:          handle_delete,
     Opcode.RENAME:          handle_rename,
     Opcode.EXPAND_PATH:     handle_expand_path,
+    Opcode.FILE_WRITE_DIFF: handle_file_write_diff,
 }

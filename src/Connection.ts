@@ -140,6 +140,12 @@ export class Connection {
         } );
     }
 
+    public async writeFileDiff( priority: number, remotePath: string, originalContent: Uint8Array, updatedContent: Uint8Array ) {
+        return await this.workerDo( priority, async ( worker: PonyWorker ) => {
+            return await worker.writeFileDiff( remotePath, originalContent, updatedContent );
+        } );
+    }
+
     public async rename( priority: number, fromPath: string, toPath: string, options: { overwrite: boolean } ) {
         return await this.workerDo( priority, async ( worker: PonyWorker ) => {
             return await worker.rename( fromPath, toPath, options );

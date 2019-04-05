@@ -2,6 +2,8 @@ import { Connection } from "./Connection";
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
 import { Channel } from "ssh2";
+import { diffChars } from 'diff';
+import crypto = require( 'crypto' );
 
 type BufferSource = Buffer;
 
@@ -16,8 +18,15 @@ export enum Opcode {
     DELETE          = 0x06,
     RENAME          = 0x07,
     EXPAND_PATH     = 0x08,
+    FILE_WRITE_DIFF = 0x09,
     ADD_WATCH       = 0x10,
     REMOVE_WATCH    = 0x11,
+}
+
+enum DiffAction {
+    UNCHANGED = 0x00,
+    INSERTED  = 0x01,
+    REMOVED   = 0x02,
 }
 
 export enum ParcelType {
@@ -99,6 +108,49 @@ export class PonyWorker {
             data: data,
             create: options.create,
             overwrite: options.overwrite,
+        } );
+    }
+
+    public async writeFileDiff( remotePath: string, originalContent: Uint8Array, updatedContent: Uint8Array ) {
+        const originalString = Buffer.from( originalContent ).toString( 'binary' );
+        const updatedString = Buffer.from( updatedContent ).toString( 'binary' );
+        const rawDiff = diffChars( originalString, updatedString );
+
+        // Grind up the generated diff into a flat array efficient for msgpack. 
+        // Array contains pairs of elements; [ action, data, action, data, ... ]
+        // - Data for INSERTED action is the data to insert,
+        // - Data for REMOVED or UNCHANGED actions is the number of bytes to exclude or copy from the original.
+        // Give up if diff seems to be larger than the whole file, based on approximation of msgpack'd size: 
+        // - 3 bytes per diff action (1-byte action + 1-5 byte action size)
+        // - Plus the total size of bytes inserted via the diff
+        const diff = [];
+        let approxDiffSize = rawDiff.length * 3;
+        for ( const diffPiece of rawDiff ) {
+            if ( diffPiece.added ) {
+                diff.push( DiffAction.INSERTED );
+                diff.push( diffPiece.value );
+                approxDiffSize += diffPiece.value.length;
+            } else if ( diffPiece.removed ) {
+                diff.push( DiffAction.REMOVED );
+                diff.push( diffPiece.value.length );
+            } else {
+                diff.push( DiffAction.UNCHANGED );
+                diff.push( diffPiece.value.length );
+            }
+
+            if ( approxDiffSize > updatedContent.length ) {
+                throw new Error( 'Giving up on preparing a diff; it is likely to be larger than just writing the file' );
+            }
+        }
+
+        const hashBefore = crypto.createHash( 'md5' ).update( originalContent ).digest( 'hex' );
+        const hashAfter = crypto.createHash( 'md5' ).update( updatedContent ).digest( 'hex' );
+        
+        return await this.get( Opcode.FILE_WRITE_DIFF, {
+            path: remotePath,
+            hashBefore,
+            hashAfter,
+            diff
         } );
     }
 
