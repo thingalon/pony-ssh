@@ -39,9 +39,10 @@ interface ServerInfo {
 export class Connection {
 
     public host: Host;
+    public serverInfo?: ServerInfo;
+
     private config: HostConfig;
-    private client: Client;
-    private serverInfo?: ServerInfo;
+    private client: Client;    
     private watchWorker?: WatchWorker;
     private workers: PriorityPool<PonyWorker>;
     
@@ -127,9 +128,9 @@ export class Connection {
         } );
     }
 
-    public async readFile( priority: number, remotePath: string ): Promise<Uint8Array> {
+    public async readFile( priority: number, remotePath: string, cachedHash?: string ): Promise<Uint8Array | Symbol> {
         return await this.workerDo( priority, async ( worker: PonyWorker ) => {
-            return await worker.readFile( remotePath );
+            return await worker.readFile( remotePath, cachedHash );
         } );
     }
 

@@ -1,9 +1,11 @@
 import { Connection } from "./Connection";
-import { Channel } from "ssh2";
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
+import { Channel } from "ssh2";
 
 type BufferSource = Buffer;
+
+export const HashMatch = Symbol( 'HashMatch' );
 
 export enum Opcode {
     LS              = 0x01,
@@ -78,11 +80,15 @@ export class PonyWorker {
         return await this.get( Opcode.LS, { path: path } );
     }
 
-    public async readFile( remotePath: string ): Promise<Uint8Array> {
+    public async readFile( remotePath: string, cachedHash?: string ): Promise<Uint8Array | Symbol> {
         const chunks: Buffer[] = [];
-        await this.get( Opcode.FILE_READ, { path: remotePath }, ( chunk: Buffer ) => {
+        const header = await this.get( Opcode.FILE_READ, { path: remotePath, cachedHash: cachedHash }, ( chunk: Buffer ) => {
             chunks.push( chunk );
         } );
+
+        if ( header.hashMatch ) {
+            return HashMatch;
+        }
 
         return Buffer.concat( chunks );
     }

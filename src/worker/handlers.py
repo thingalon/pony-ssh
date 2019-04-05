@@ -1,4 +1,5 @@
 from collections import deque
+import hashlib
 import logging
 import os
 import shutil
@@ -88,6 +89,15 @@ def handle_file_read(args):
 
     # Open the file before sending a response header
     fh = open(path, 'r')
+
+    # If a hash has been supplied, check if it matches. IF so, shortcut download.
+    if 'cachedHash' in args:
+        logging.info('Checking with hash ' + str(args['cachedHash']))
+        hash = hashlib.md5(fh.read()).hexdigest()
+        if hash == args['cachedHash']:
+            send_response_header({'hashMatch': True})
+            return
+        fh.seek(0, 0)
 
     length = os.path.getsize(path)
     send_response_header({'length': length})

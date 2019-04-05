@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { Host, HostConfig } from './Host';
+import path = require( 'path' );
 
 export class PonyFileSystem implements vscode.FileSystemProvider {
 
     private availableHosts: { [name: string]: HostConfig };
     private activeHosts: { [name: string]: Host };
     private nextWatchId: number;
+    private cachePath: string;
 
     private emitter: vscode.EventEmitter<vscode.FileChangeEvent[]>;
     private bufferedEvents: vscode.FileChangeEvent[];
@@ -20,6 +22,8 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         this.activeHosts = {};
         this.availableHosts = this.loadHostConfigs();
         this.nextWatchId = 1;
+
+        this.cachePath = path.join( context.globalStoragePath, 'cache' );
     }
 
     public getAvailableHosts() {
@@ -105,7 +109,7 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
 
     public getActiveHost( name: string ): Host {
         if ( ! this.activeHosts[ name ] ) {
-            this.activeHosts[ name ] = new Host( name, this.availableHosts[ name ] );
+            this.activeHosts[ name ] = new Host( this.cachePath, name, this.availableHosts[ name ] );
         }
 
         return this.activeHosts[ name ];

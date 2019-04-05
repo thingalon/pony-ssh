@@ -3,6 +3,8 @@ import { Connection } from "./Connection";
 import { DirectoryCache } from "./DirectoryCache";
 import * as vscode from 'vscode';
 import path = require( 'path' );
+import * as crypto from 'crypto';
+import { HashMatch } from "./PonyWorker";
 
 export interface HostConfig {
     host: string;
@@ -30,17 +32,27 @@ export class Host {
     private connectionPromise: Promise<void> | undefined;
     private activeWatches: { [key: number]: HostWatch };
 
-    constructor( name: string, config: HostConfig ) {
+    constructor( cachePath: string, name: string, config: HostConfig ) {
         this.name = name;
         this.config = config;
         this.connection = new Connection( this );
-        this.directoryCache = new DirectoryCache();
+        this.directoryCache = new DirectoryCache( path.join( cachePath, name ) );
         this.activeWatches = {};
     }
 
     public async connect() {
         if ( ! this.connectionPromise ) {
-            this.connectionPromise = this.connection.connect();
+            this.connectionPromise = new Promise( async ( resolve, reject ) => {
+                try {
+                    await this.connection.connect();
+                    const serverInfo = this.connection.serverInfo!;
+                    await this.directoryCache.setFileCacheKey( Buffer.from( serverInfo.cacheKey, 'hex' ), serverInfo.newCacheKey );
+
+                    resolve();
+                } catch ( err ) {
+                    reject ( err );
+                }
+            } );
         }
 
         return this.connectionPromise;
@@ -91,7 +103,25 @@ export class Host {
 
     public async readFile( priority: number, remotePath: string ): Promise<Uint8Array> {
         await this.connect();
-        return await this.connection.readFile( priority, remotePath );
+
+        const cachedContent = await this.directoryCache.getFile( remotePath );
+        const cachedHash = cachedContent ? crypto.createHash( 'md5' ).update( cachedContent ).digest( 'hex' ) : undefined;
+
+        const content = await this.connection.readFile( priority, remotePath, cachedHash );
+
+        if ( content instanceof Uint8Array ) {
+            // Do not await setFile; it may be slow (it uses crypto.randomBytes)
+            this.directoryCache.setFile( remotePath, content ).then( ( err ) => {
+                // Should not happen; setFile has its own try/catch block.
+                console.error( err );
+            } );
+
+            return content;
+        } else if ( content === HashMatch ) {
+            return cachedContent!;
+        } else {
+            throw new Error( 'Invalid response from connection.readFile: ' + content );
+        }
     }
 
     public async writeFile( priority: number, remotePath: string, data: Uint8Array, options: { create: boolean, overwrite: boolean } ) {

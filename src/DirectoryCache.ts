@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import * as crypto from 'crypto';
+import * as path from 'path';
+import mkdirp = require('mkdirp-promise');
+import * as fs from 'fs';
 import NodeCache = require('node-cache');
-import { pathToFileURL } from 'url';
-import path = require( 'path' );
+import rmfr = require( 'rmfr' );
 
 enum WorkerFileType {
     FILE      = 0x01,
@@ -14,7 +17,13 @@ export class DirectoryCache {
     private statCache: NodeCache;
     private listCache: NodeCache;
 
-    constructor() {
+    private unsafePathChars: RegExp = /[\/\\\:\*\?\"\<\>\|]/g;
+    private fileCacheBase: string;
+    private fileCacheKey: Buffer | undefined;
+
+    constructor( fileCacheBase: string ) {
+        this.fileCacheBase = fileCacheBase;
+
         this.statCache = new NodeCache( {
             stdTTL: 10,
             checkperiod: 120,
@@ -24,6 +33,14 @@ export class DirectoryCache {
             stdTTL: 10,
             checkperiod: 120,
         } );
+    }
+
+    public async setFileCacheKey( key: Buffer, newKey: boolean ) {
+        if ( newKey ) {
+            await rmfr( path.join( this.fileCacheBase, 'files' ) );
+        }
+
+        this.fileCacheKey = key;
     }
 
     public normalizePath( path: string ): string {
@@ -70,6 +87,63 @@ export class DirectoryCache {
         };
     }
 
+    async setFile( remotePath: string, content: Uint8Array ) {
+        if ( ! this.fileCacheKey ) {
+            return;
+        }
+
+        try {
+            const storagePath = this.fileCachePath( remotePath );
+            await mkdirp( path.dirname( storagePath ) );
+
+            const iv = crypto.randomBytes( 16 );
+            const cipher = crypto.createCipheriv( 'aes-256-cbc', this.fileCacheKey, iv );
+            const encrypted = Buffer.concat( [ iv, cipher.update( content ), cipher.final() ] );
+
+            // TODO: Once fs.promises is out of "experimental", replace with that.
+            await new Promise( ( resolve, reject ) => {
+                fs.writeFile( storagePath, encrypted, ( err ) => {
+                    if ( err ) {
+                        reject( err );
+                    } else {
+                        resolve();
+                    }
+                } );
+            } );
+        } catch ( err ) {
+            vscode.window.showWarningMessage( 'Failed to cache file ' + remotePath + ': ' + err.message, { modal: false } );
+        }
+    }
+
+    async getFile( remotePath: string ): Promise<Uint8Array | undefined> {
+        if ( ! this.fileCacheKey ) {
+            return undefined;
+        }
+
+        try {
+            const storagePath = this.fileCachePath( remotePath );
+
+            // TODO: Once fs.promises is out of "experimental", replace with that.
+            const fileContent = await new Promise<Buffer>( ( resolve, reject ) => {
+                fs.readFile( storagePath, ( err, data ) => {
+                    if ( err ) {
+                        reject( err );
+                    } else {
+                        resolve( data );
+                    }
+                } );
+            } );
+
+            const iv = fileContent.slice( 0, 16 );
+            const encrypted = fileContent.slice( 16 );
+
+            const decipher = crypto.createDecipheriv( 'aes-256-cbc', this.fileCacheKey, iv );
+            return Buffer.concat( [ decipher.update( encrypted ), decipher.final() ] );
+        } catch ( err ) {
+            return undefined;
+        }
+    }
+
     private workerFileTypeToVscode( workerFileType: WorkerFileType ): vscode.FileType {
         let type: vscode.FileType = vscode.FileType.Unknown;
 
@@ -84,6 +158,22 @@ export class DirectoryCache {
         }
 
         return type;
+    }
+
+    // Given a filename, keep it unique, free from special chars and length-limited for use in cache path
+    private stripPathPiece( pathPiece: string ): string {
+        const clean = pathPiece.replace( this.unsafePathChars, '-' ).substr( 0, 100 );
+        if ( clean === pathPiece ) {
+            return pathPiece;
+        } else {
+            return clean + '-' + crypto.createHash( 'md5' ).update( pathPiece ).digest( 'hex' );
+        }
+    }
+
+    // Strip a remote path to make it friendly to store on most local filesystems
+    private fileCachePath( remotePath: string ): string {
+        const pieces = remotePath.split( '/' ).filter( x => x ).map( this.stripPathPiece.bind( this ) );
+        return path.join( this.fileCacheBase, 'files', ...pieces );
     }
 
 }

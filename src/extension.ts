@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { PonyFileSystem } from './PonyFileSystem';
-import { Host } from './Host';
 
 export function activate( context: vscode.ExtensionContext ) {
 	const ponyfs = new PonyFileSystem( context );
