@@ -6,16 +6,16 @@ Pony SSH is a VSCode plugin which offers extremely fast file editing via SSH.
 
 ## Features
 
-It's very rough at this point, but so far it can:
-- Open a remote folder and browse its contents
+So far, Pony-SSH can:
+- Open remote folders, and add them to your workspace
 - Open and edit remote files
-- Explode unexpectedly as this is unfinished software.
+- Save remote files extremely quickly
+- Cache remote file content w/ encryption, for fast file access without sacrificing security
+- Watch for changes on the remote filesystem automatically
+- Explode unexpectedly because it is not quite finished yet. :) 
 
-More features are planned for the near future, including:
-- Intelligent file caching
-- Remote filesystem watching
-- Faster file saving
-- GUI to browse and open files
+Also planned, but not implemented yet:
+- A nice GUI for setting up server connections and browsing remote filesystems to open files / folders
 
 ## Setup
 
