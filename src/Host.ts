@@ -24,8 +24,8 @@ interface HostWatch {
 export class Host {
 
     public config: HostConfig;
+    public name: string;
 
-    private name: string;
     private directoryCache: DirectoryCache;
     private connectionPromise: Promise<Connection> | undefined;
     private activeWatches: { [key: number]: HostWatch };

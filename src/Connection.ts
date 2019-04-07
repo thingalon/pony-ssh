@@ -5,6 +5,7 @@ import { PonyWorker } from "./PonyWorker";
 import { PriorityPool } from "./PriorityPool";
 import { WatchWorker } from "./WatchWorker";
 import { EventEmitter } from "events";
+import { StatusTicker } from "./StatusTicker";
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = '' +
@@ -61,15 +62,14 @@ export class Connection extends EventEmitter {
     public async connect() {
         try {
             // Open SSH connection
-            console.log( 'Opening SSH connection...' );
+            StatusTicker.showMessage( 'Connecting to ' + this.host.name + '...' );
             await this.openConnection();
 
             // Prepare worker script
-            console.log( 'Preparing worker script...' );
+            StatusTicker.showMessage( 'Initializing ' + this.host.name + '...' );
             await this.prepareWorkerScript();
 
             // Open one primary worker.
-            console.log( 'Starting workers...' );
             const channel = await this.startWorkerChannel();
             const worker = new PonyWorker( this, channel );
 
@@ -84,8 +84,12 @@ export class Connection extends EventEmitter {
 
             // Kick off up to 5 additional workers. Don't wait on this process.
             void this.startSecondaryWorkers();
+
+            StatusTicker.showMessage( 'Connected to ' + this.host.name + '!' );
         } catch ( err ) {
             // If any part of connecting fails, clean up leftovers.
+            StatusTicker.showMessage( 'Error connecting to ' + this.host.name + '!' );
+
             this.emit( 'error', err );
             this.close();
             throw( err );
@@ -96,7 +100,6 @@ export class Connection extends EventEmitter {
         // Verify worker script
         let workerScriptOk = await this.verifyWorkerScript();
         if ( ! workerScriptOk ) {
-            console.log( 'Uploading worker script...' );
             await this.uploadWorkerScript();
 
             workerScriptOk = await this.verifyWorkerScript();
@@ -329,7 +332,6 @@ export class Connection extends EventEmitter {
         try {
             const channel = await this.startWorkerChannel( [ 'watcher' ] );
             this.watchWorker = new WatchWorker( this, channel );
-            console.log( 'Started watchWorker' );
         } catch ( err ) {
             console.warn( 'Failed to open worker for watching file changes: ' + err.message );
         }

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { PonyFileSystem } from './PonyFileSystem';
+import { StatusTicker } from './StatusTicker';
 
 async function openRemoteFolder( ponyfs: PonyFileSystem, hostName: string, remotePath: string ) {
 	const displayName = hostName + ':' + ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
@@ -16,15 +17,15 @@ async function openRemoteFolder( ponyfs: PonyFileSystem, hostName: string, remot
 			uri: vscode.Uri.parse( fullPath ),
 		};
 
-        vscode.workspace.updateWorkspaceFolders( 0, 0, newFolder );
-    } catch ( err ) {
+		vscode.workspace.updateWorkspaceFolders( 0, 0, newFolder );
+	} catch ( err ) {
 		const retryAction = { title: 'Retry' };
 		const cancelAction = { title: 'Cancel' };
 		const message = 'Failed to open ' + displayName + ': ' + err.message;
 		const response = await vscode.window.showErrorMessage( message, retryAction, cancelAction );
 
 		if ( response === retryAction ) {
-			openRemoteFolder( ponyfs, hostName, remotePath );
+			await openRemoteFolder( ponyfs, hostName, remotePath );
 		}
 	}
 }
@@ -33,6 +34,8 @@ export function activate( context: vscode.ExtensionContext ) {
 	const ponyfs = new PonyFileSystem( context );
 	const provider = vscode.workspace.registerFileSystemProvider( 'ponyssh', ponyfs, { isCaseSensitive: true });
     context.subscriptions.push( provider );
+
+	StatusTicker.initialize();
 
 	context.subscriptions.push( vscode.commands.registerCommand( 'ponyssh.openFolder', async _ => {
 		const availableHosts = ponyfs.getAvailableHosts();
@@ -61,6 +64,6 @@ export function activate( context: vscode.ExtensionContext ) {
 			return;
 		}
 
-		openRemoteFolder( ponyfs, hostName, remotePath );
+		await openRemoteFolder( ponyfs, hostName, remotePath );
 	} ) );
 }
