@@ -47,13 +47,17 @@ def handle_ls(args):
                     children = None
                     break
 
-                childStat = os.stat(os.path.join(absPath, childName))
-                children[childName] = process_stat(childStat)
+                child_path = os.path.join(absPath, childName)
+                try:
+                    childStat = os.stat(child_path)
+                    children[childName] = process_stat(childStat)
 
-                isDir = stat.S_ISDIR(childStat[stat.ST_MODE])
-                if isDir and len(explore) < dirLimit:
-                    explore.append(os.path.join(relPath, childName))
-            
+                    isDir = stat.S_ISDIR(childStat[stat.ST_MODE])
+                    if isDir and len(explore) < dirLimit:
+                        explore.append(os.path.join(relPath, childName))
+                except OSError as err:
+                    logging.warning('Skipping ' + child_path + ': ' + str(err))
+
             if children is not None:
                 dirs[relPath] = children
         except OSError as err:
