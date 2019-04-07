@@ -4,6 +4,7 @@ import { WorkerScript } from "./WorkerScript";
 import { PonyWorker } from "./PonyWorker";
 import { PriorityPool } from "./PriorityPool";
 import { WatchWorker } from "./WatchWorker";
+import { EventEmitter } from "events";
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = '' +
@@ -36,7 +37,7 @@ interface ServerInfo {
     newCacheKey: boolean;
 }
 
-export class Connection {
+export class Connection extends EventEmitter {
 
     public host: Host;
     public serverInfo?: ServerInfo;
@@ -47,13 +48,14 @@ export class Connection {
     private workers: PriorityPool<PonyWorker>;
     
     constructor( host: Host ) {
+        super();
+
         this.host = host;
         this.config = host.config;
 
         this.workers = new PriorityPool<PonyWorker>();
-        
+
         this.client = new Client();
-        this.client.on( 'error', this.handleConnectionError );
     }
 
     public async connect() {
@@ -70,7 +72,7 @@ export class Connection {
             console.log( 'Starting workers...' );
             const channel = await this.startWorkerChannel();
             const worker = new PonyWorker( this, channel );
-            
+
             // Start a secondary worker for Watching, grab server info. Can be done in parallel(ish)
             const promises: Promise<void>[] = [];
             promises.push( this.startWatcher() );
@@ -84,6 +86,7 @@ export class Connection {
             void this.startSecondaryWorkers();
         } catch ( err ) {
             // If any part of connecting fails, clean up leftovers.
+            this.emit( 'error', err );
             this.close();
             throw( err );
         }
@@ -195,9 +198,8 @@ export class Connection {
     }
 
     private handleConnectionError( err: Error ) {
-        // TODO: Should we emit an error or something?
-        console.error( err );
-        console.warn( 'handleConnectionError called but not yet implemented!' );
+        console.error( 'Connection error: ' + err.message );
+        this.emit( 'error', err );
         this.close();
     }
 
@@ -207,6 +209,7 @@ export class Connection {
 
             this.client.on( 'ready', () => {
                 this.client.removeListener( 'error', reject );
+                this.client.on( 'error', this.handleConnectionError );
                 resolve();
             } );
 
