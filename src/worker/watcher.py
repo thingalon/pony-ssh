@@ -22,6 +22,7 @@ class Watcher:
         self.watch_ids = {}
         self.watch_descriptors = {}
         self.message_reader = prepare_message_reader()
+        self.home_dir = os.path.expanduser('~')
 
     def run(self):
         done = False
@@ -36,7 +37,7 @@ class Watcher:
     def read_stdin(self):
         [opcode, args] = next(self.message_reader)
         if opcode == Opcode.ADD_WATCH:
-            self.add_watch(args['id'], os.path.expanduser(args['path']), args['recursive'], args['excludes'])
+            self.add_watch(args['id'], args['path'], args['recursive'], args['excludes'])
         elif opcode == Opcode.REMOVE_WATCH:
             self.rm_watch(args['id'])
         else:
@@ -53,6 +54,10 @@ class Watcher:
                         yield child_path
 
     def add_watch(self, watch_id, path, recursive, excludes):
+        collapse_home = (path[0] == '~')
+        if collapse_home:
+            path = os.path.expanduser(path)
+
         if not os.path.exists(path):
             return
 
@@ -64,7 +69,7 @@ class Watcher:
                 send_warning('Failed to watch ' + watch_path)
             else:
                 self.watch_ids[watch_id].append(watch_wd)
-                self.watch_descriptors[watch_wd] = (watch_id, path)
+                self.watch_descriptors[watch_wd] = (watch_id, path, collapse_home)
 
     def rm_watch(self, watch_id):
         if watch_id in self.watch_ids:
@@ -103,8 +108,12 @@ class Watcher:
                 send_warning('Change to ' + name + ' found with an invalid watch descriptor: ' + str(wd))
                 continue
 
-            watch_id, watch_path = self.watch_descriptors[wd]
+            watch_id, watch_path, collapse_home = self.watch_descriptors[wd]
             full_path = os.path.join(watch_path, name)
+            if collapse_home:
+                if full_path.startswith(self.home_dir):
+                    full_path = '~' + full_path[len(self.home_dir):]
+
             if watch_id not in changes:
                 changes[watch_id] = {}
 

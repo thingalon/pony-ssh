@@ -21,7 +21,7 @@ def handle_expand_path(args):
         send_response_header({'path': path})
 
 def handle_ls(args):
-    base = args['path']
+    base = os.path.expanduser(args['path'])
     selfStat = os.stat(base)
 
     result = { 'stat': process_stat(selfStat) }
@@ -90,7 +90,7 @@ def handle_get_server_info(args):
     send_response_header({ 'cacheKey': cacheKey, 'newCacheKey': cacheKeyIsNew })
 
 def handle_file_read(args):
-    path = args['path']
+    path = os.path.expanduser(args['path'])
 
     # Open the file before sending a response header
     fh = open(path, 'r')
@@ -122,7 +122,7 @@ def handle_file_read(args):
     send_parcel(ParcelType.ENDOFBODY, '')
 
 def handle_file_write_diff(args):
-    path = args['path']
+    path = os.path.expanduser(args['path'])
 
     if not os.path.exists(path):
         raise OSError(Error.ENOENT, 'File not found')
@@ -161,7 +161,7 @@ def handle_file_write_diff(args):
     send_response_header({})
 
 def handle_file_write(args):
-    path = args['path']
+    path = os.path.expanduser(args['path'])
 
     alreadyExists = os.path.exists(path)
     if alreadyExists and not args['overwrite']:
@@ -176,12 +176,12 @@ def handle_file_write(args):
     send_response_header({})
 
 def handle_mkdir(args):
-    path = args['path']
+    path = os.path.expanduser(args['path'])
     os.mkdir(path)
     send_response_header({})
 
 def handle_delete(args):
-    path = args['path']
+    path = os.path.expanduser(args['path'])
     if os.path.isdir(path) and not os.path.islink(path):
         shutil.rmtree(path)
     else:
@@ -189,8 +189,8 @@ def handle_delete(args):
     send_response_header({})
 
 def handle_rename(args):
-    fromPath = args['from']
-    toPath = args['to']
+    fromPath = os.path.expanduser(args['from'])
+    toPath = os.path.expanduser(args['to'])
 
     if os.path.exists(toPath):
         if args['overwrite']:

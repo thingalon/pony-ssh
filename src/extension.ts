@@ -2,34 +2,6 @@ import * as vscode from 'vscode';
 import { PonyFileSystem } from './PonyFileSystem';
 import { StatusTicker } from './StatusTicker';
 
-async function openRemoteFolder( ponyfs: PonyFileSystem, hostName: string, remotePath: string ) {
-	const displayName = hostName + ':' + ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
-
-	try {
-		// Ask the host to verify and expand the path (resolving ~/ if present)
-		const host = await ponyfs.getActiveHost( hostName );
-		const expandedPath = await host.expandPath( 1, remotePath );
-
-		// Open the requested path, if valid.
-		const fullPath = 'ponyssh:/' + hostName + ( expandedPath.startsWith( '/' ) ? '' : '/' ) + expandedPath;
-		const newFolder = {
-			name: displayName,
-			uri: vscode.Uri.parse( fullPath ),
-		};
-
-		vscode.workspace.updateWorkspaceFolders( 0, 0, newFolder );
-	} catch ( err ) {
-		const retryAction = { title: 'Retry' };
-		const cancelAction = { title: 'Cancel' };
-		const message = 'Failed to open ' + displayName + ': ' + err.message;
-		const response = await vscode.window.showErrorMessage( message, retryAction, cancelAction );
-
-		if ( response === retryAction ) {
-			await openRemoteFolder( ponyfs, hostName, remotePath );
-		}
-	}
-}
-
 export function activate( context: vscode.ExtensionContext ) {
 	const ponyfs = new PonyFileSystem( context );
 	const provider = vscode.workspace.registerFileSystemProvider( 'ponyssh', ponyfs, { isCaseSensitive: true });
@@ -49,10 +21,7 @@ export function activate( context: vscode.ExtensionContext ) {
 			return;
 		}
 
-		// Start connecting while we ask for a remote path. 
-		( await ponyfs.getActiveHost( hostName ) ).getConnection();
-
-		// Ask for remote host
+		// Ask for remote path
 		const defaultPath = availableHosts[ hostName ].path || '~';
 		let remotePath = await vscode.window.showInputBox( {
 			placeHolder: 'Remote path. Default: ' + defaultPath,
@@ -64,6 +33,16 @@ export function activate( context: vscode.ExtensionContext ) {
 			return;
 		}
 
-		await openRemoteFolder( ponyfs, hostName, remotePath );
+		// Open the requested path
+		const leadingSlashPath = ( remotePath.startsWith( '/' ) ? '' : '/' ) + remotePath;
+		const fullPath = 'ponyssh:/' + hostName + leadingSlashPath;
+		const displayName = hostName + ':' + ( remotePath.startsWith( '~' ) ? remotePath : leadingSlashPath );
+
+		const newFolder = {
+			name: displayName,
+			uri: vscode.Uri.parse( fullPath ),
+		};
+
+		vscode.workspace.updateWorkspaceFolders( 0, 0, newFolder );
 	} ) );
 }
