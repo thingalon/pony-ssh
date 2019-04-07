@@ -13,6 +13,7 @@ class Error:
     EXDEV   = 18 # Cross-device link
     ENODEV  = 19 # No such device
     ENOTDIR = 20 # Not a directory
+    EISDIR  = 21 # Is a directory
     EINVAL  = 22 # Invalid argument
     EROFS   = 30 # Read-only filesystem
     ERANGE  = 34 # Out of range

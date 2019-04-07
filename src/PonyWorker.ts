@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { Connection } from "./Connection";
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
@@ -21,6 +22,27 @@ export enum Opcode {
     FILE_WRITE_DIFF = 0x09,
     ADD_WATCH       = 0x10,
     REMOVE_WATCH    = 0x11,
+}
+
+enum ErrorCode {
+    OK      = 0,
+    EPERM   = 1,    // Operation not permitted
+    ENOENT  = 2,    // No such file / directory
+    EIO     = 5,    // IO error
+    EBADF   = 9,    // Bad file number
+    EAGAIN  = 11,   // Try again
+    EACCES  = 13,   // Access denied
+    EBUSY   = 16,   // Device busy
+    EEXIST  = 17,   // File exists
+    EXDEV   = 18,   // Cross-device link
+    ENODEV  = 19,   // No such device
+    ENOTDIR = 20,   // Not a directory
+    EISDIR  = 21,   // Is a directory
+    EINVAL  = 22,   // Invalid argument
+    EROFS   = 30,   // Read-only filesystem
+    ERANGE  = 34,   // Out of range
+    ENOSYS  = 38,   // Function not implemented
+    ENODATA = 61,   // No data available
 }
 
 enum DiffAction {
@@ -215,6 +237,35 @@ export class PonyWorker {
         }
     }
 
+    private processError( code: ErrorCode, message: string ): Error {
+        switch ( code ) {
+            case ErrorCode.EPERM:
+            case ErrorCode.EACCES:
+            case ErrorCode.EROFS:
+                return vscode.FileSystemError.NoPermissions( message );
+
+            case ErrorCode.ENOENT:
+                return vscode.FileSystemError.FileNotFound( message );
+
+            case ErrorCode.EEXIST:
+                return vscode.FileSystemError.FileExists( message );
+
+            case ErrorCode.EAGAIN:
+            case ErrorCode.EBUSY:
+            case ErrorCode.ENODEV:
+                return vscode.FileSystemError.Unavailable( message );
+
+            case ErrorCode.ENOTDIR:
+                return vscode.FileSystemError.FileNotADirectory( message );
+
+            case ErrorCode.EISDIR:
+                return vscode.FileSystemError.FileIsADirectory( message );
+
+            default:
+                return new WorkerError( code, message );
+        }
+    }
+
     private async get( opcode: Opcode, args: Object, bodyCallback: BodyCB | undefined = undefined ): Promise<ParcelChunk> {
         return new Promise( ( resolve, reject ) => {
             let header: ParcelChunk | undefined = undefined;
@@ -224,7 +275,7 @@ export class PonyWorker {
                 switch ( type ) {
                     case ParcelType.ERROR:
                         const details = msgpackDecode( data );
-                        reject( new WorkerError( details.code, details.error ) );
+                        reject( this.processError( details.code, details.error ) );
                         return false;
 
                     case ParcelType.HEADER:
