@@ -6,8 +6,6 @@ import { Channel } from "ssh2";
 import { diffChars } from 'diff';
 import crypto = require( 'crypto' );
 
-type BufferSource = Buffer;
-
 export const HashMatch = Symbol( 'HashMatch' );
 
 export enum Opcode {
