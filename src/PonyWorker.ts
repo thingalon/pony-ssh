@@ -22,7 +22,7 @@ export enum Opcode {
     REMOVE_WATCH    = 0x11,
 }
 
-enum ErrorCode {
+export enum ErrorCode {
     OK      = 0,
     EPERM   = 1,    // Operation not permitted
     ENOENT  = 2,    // No such file / directory
