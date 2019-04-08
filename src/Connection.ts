@@ -265,9 +265,17 @@ export class Connection extends EventEmitter {
         return ( 'h' === response && hash === workerScript.getHash() );
     }
 
+    private pythonCommand() {
+        if ( this.config.python ) {
+            return this.config.python;
+        } else {
+            return 'python';
+        }
+    }
+
     private async uploadWorkerScript() {
         return new Promise( ( resolve, reject ) => {
-            const pythonCommand = shellEscape( [ 'python', '-c', uploadCommand ] );
+            const pythonCommand = shellEscape( [ this.pythonCommand(), '-c', uploadCommand ] );
             const shellCommand = shellEscape( [ 'sh', '-c', pythonCommand ] );
 
             this.client.exec( shellCommand, async ( err, channel ) => {
@@ -303,7 +311,7 @@ export class Connection extends EventEmitter {
 
     private async startWorkerChannel( args: string[] = [] ): Promise<Channel> {
         return new Promise<Channel>( ( resolve, reject ) => {
-            const pythonCommand = 'python ~/.pony-ssh/worker.zip ' + shellEscape( args );
+            const pythonCommand = shellEscape( [ this.pythonCommand() ] ) + ' ~/.pony-ssh/worker.zip ' + shellEscape( args );
             const shellCommand = shellEscape( [ 'sh', '-c', pythonCommand ] );
 
             this.client.exec( shellCommand, async ( err, channel ) => {

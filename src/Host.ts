@@ -10,6 +10,7 @@ export interface HostConfig {
     username: string;
     agent?: string;
     path?: string;
+    python?: string;
 }
 
 type ChangeCallback = ( host: string, path: string, type: vscode.FileChangeType ) => void;

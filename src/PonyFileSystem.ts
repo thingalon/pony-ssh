@@ -138,10 +138,11 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         for ( const name in configHosts ) {
             const configHost = configHosts[ name ];
             hosts[ name ] = {
-                "host": configHost.host,
-                "username": configHost.username,
-                "agent": configHost.agent || ( configHost.password ? undefined : defaultAgent ),
-                "path": configHost.path,
+                host: configHost.host,
+                username: configHost.username,
+                agent: configHost.agent || ( configHost.password ? undefined : defaultAgent ),
+                path: configHost.path,
+                python: configHost.python,
             };
         }
 
