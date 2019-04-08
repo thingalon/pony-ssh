@@ -5,6 +5,7 @@ import { WorkerError } from "./WorkerError";
 import { Channel } from "ssh2";
 import { diffChars } from 'diff';
 import crypto = require( 'crypto' );
+import DiffMatchPatch = require( 'diff-match-patch' );
 
 export const HashMatch = Symbol( 'HashMatch' );
 
@@ -134,7 +135,10 @@ export class PonyWorker {
     public async writeFileDiff( remotePath: string, originalContent: Uint8Array, updatedContent: Uint8Array ) {
         const originalString = Buffer.from( originalContent ).toString( 'binary' );
         const updatedString = Buffer.from( updatedContent ).toString( 'binary' );
-        const rawDiff = diffChars( originalString, updatedString );
+
+        const differ = new DiffMatchPatch();
+        const rawDiff = differ.diff_main( originalString, updatedString, undefined, undefined );
+        differ.diff_cleanupEfficiency( rawDiff );
 
         // Grind up the generated diff into a flat array efficient for msgpack. 
         // Array contains pairs of elements; [ action, data, action, data, ... ]
@@ -146,16 +150,16 @@ export class PonyWorker {
         const diff = [];
         let approxDiffSize = rawDiff.length * 3;
         for ( const diffPiece of rawDiff ) {
-            if ( diffPiece.added ) {
+            if ( diffPiece[0] === 1 ) {
                 diff.push( DiffAction.INSERTED );
-                diff.push( diffPiece.value );
-                approxDiffSize += diffPiece.value.length;
-            } else if ( diffPiece.removed ) {
+                diff.push( diffPiece[1] );
+                approxDiffSize += diffPiece[1].length;
+            } else if ( diffPiece[0] === -1 ) {
                 diff.push( DiffAction.REMOVED );
-                diff.push( diffPiece.value.length );
+                diff.push( diffPiece[1].length );
             } else {
                 diff.push( DiffAction.UNCHANGED );
-                diff.push( diffPiece.value.length );
+                diff.push( diffPiece[1].length );
             }
 
             if ( approxDiffSize > updatedContent.length ) {
@@ -165,7 +169,7 @@ export class PonyWorker {
 
         const hashBefore = crypto.createHash( 'md5' ).update( originalContent ).digest( 'hex' );
         const hashAfter = crypto.createHash( 'md5' ).update( updatedContent ).digest( 'hex' );
-        
+
         return await this.get( Opcode.FILE_WRITE_DIFF, {
             path: remotePath,
             hashBefore,
