@@ -64,7 +64,7 @@ class Watcher:
         self.watch_ids[watch_id] = []
         regex_excludes = map(vscode_glob_to_regexp, excludes)
         for watch_path in self.find_paths(path, recursive, regex_excludes):
-            watch_wd = self.libc.inotify_add_watch(self.inotify_fd, watch_path, self.libc.IN_ALL_CHANGES)
+            watch_wd = self.libc.inotify_add_watch(self.inotify_fd, watch_path.encode('latin-1'), self.libc.IN_ALL_CHANGES)
             if watch_wd < 0:
                 send_warning('Failed to watch ' + watch_path)
             else:
@@ -101,7 +101,7 @@ class Watcher:
             if len(self.inotify_buffer) < total_size:
                 break
 
-            name = self.inotify_buffer[self.libc.INOTIFY_HEADER_SIZE:total_size].rstrip(b'\0')
+            name = self.inotify_buffer[self.libc.INOTIFY_HEADER_SIZE:total_size].rstrip(b'\0').decode('latin-1')
             self.inotify_buffer = self.inotify_buffer[total_size:]
 
             if wd not in self.watch_descriptors:

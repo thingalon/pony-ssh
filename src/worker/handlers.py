@@ -120,7 +120,7 @@ def handle_file_read(args):
 
     fh.close()
 
-    send_parcel(ParcelType.ENDOFBODY, '')
+    send_parcel(ParcelType.ENDOFBODY, b'')
 
 def handle_file_write_diff(args):
     path = os.path.expanduser(args['path'])
