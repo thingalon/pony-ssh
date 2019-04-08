@@ -8,7 +8,7 @@ enum ChangeType {
     CHANGED = 0x01,
     CREATED = 0x02,
     DELETED = 0x03
-};
+}
 
 export class WatchWorker extends PonyWorker {
 
