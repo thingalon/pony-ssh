@@ -128,6 +128,7 @@ export class Host {
                 try {
                     await connection.writeFileDiff( priority, remotePath, originalContent, data );
                     this.directoryCache.setFile( remotePath, data );
+                    return;
                 } catch ( err ) {
                     console.warn( 'Saving w/ diffing failed, going to retry with full write: ' + err.message );
                 }

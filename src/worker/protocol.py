@@ -16,7 +16,7 @@ class MessageReader:
         read_size = { 0xcc: 1, 0xcd: 2, 0xce: 4, 0xcf: 8 }.get(ord(pack_header), 0)
         if read_size > 0:
             pack_header += sys.stdin.read(read_size)
-        self.message_size = msgpack.unpackb(pack_header, raw=False)
+        self.message_size = msgpack.unpackb(pack_header, raw=True)
 
     def read(self, bytes):
         if self.message_size <= 0:

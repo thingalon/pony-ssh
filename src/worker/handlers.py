@@ -5,6 +5,7 @@ import os
 import shutil
 import stat
 import tempfile
+from io import open
 
 from definitions import Opcode, ParcelType, DiffAction
 from errors import Error, CodedError
@@ -84,7 +85,7 @@ def handle_get_server_info(args):
     if cacheKey == None or len(cacheKey) < 64:
         cacheKeyIsNew = True
         cacheKey = os.urandom(32).encode('hex')
-        with open(cacheKeyFile, "w") as keyFileHandle:
+        with open(cacheKeyFile, 'w') as keyFileHandle:
             keyFileHandle.write(cacheKey)
 
     send_response_header({ 'cacheKey': cacheKey, 'newCacheKey': cacheKeyIsNew })
@@ -93,7 +94,7 @@ def handle_file_read(args):
     path = os.path.expanduser(args['path'])
 
     # Open the file before sending a response header
-    fh = open(path, 'r')
+    fh = open(path, 'rb')
 
     # If a hash has been supplied, check if it matches. IF so, shortcut download.
     if 'cachedHash' in args:
@@ -127,35 +128,36 @@ def handle_file_write_diff(args):
     if not os.path.exists(path):
         raise OSError(Error.ENOENT, 'File not found')
 
-    with open(path, 'r') as fh:
-        original_data = fh.read()
+    with open(path, 'r', encoding='latin-1') as fh:
+        original_data = bytearray(fh.read(), 'latin-1')
 
     original_hash = hashlib.md5(original_data).hexdigest()
     if original_hash != args['hashBefore']:
         raise CodedError(Error.EIO, 'File hash does not match client cached value: ' + args['hashBefore'] + ' vs ' + original_hash)
 
     # Apply diff; comes in as a flat array containing pairs; action, action data.
-    updated_data = b''
+    updated_data = bytearray()
     read_cursor = 0
     diff = args['diff']
+
     for i in range(0, len(diff), 2):
         action = diff[i]
         action_data = diff[i + 1]
 
         if action == DiffAction.INSERTED:
-            updated_data += action_data # Action data contains new data inserted
+            updated_data.extend(bytearray(action_data, 'latin-1')) # Action data contains new data inserted
         elif action == DiffAction.REMOVED:
             read_cursor += action_data # Action data contains number of bytes to remove
         else:
             # Action data contains number of bytes to copy from original
-            updated_data += original_data[read_cursor:read_cursor+action_data]
+            updated_data.extend(original_data[read_cursor:read_cursor+action_data])
             read_cursor += action_data
 
     updated_hash = hashlib.md5(updated_data).hexdigest()
     if updated_hash != args['hashAfter']:
         raise CodedError(Error.EINVAL, 'File hash after changes applied does not match expected')
 
-    with open(path, 'w') as fh:
+    with open(path, 'wb') as fh:
         fh.write(updated_data)
 
     send_response_header({})
@@ -169,7 +171,7 @@ def handle_file_write(args):
     elif not alreadyExists and not args['create']:
         raise OSError(Error.ENOENT, 'File not found')
 
-    fh = open(path, 'w')
+    fh = open(path, 'wb')
     fh.write(args['data'])
     fh.close()
 
