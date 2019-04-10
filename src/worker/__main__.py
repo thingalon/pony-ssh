@@ -24,7 +24,8 @@ def run_watcher():
         send_error(process_error(err.errno), err.strerror)
     except BaseException as err:
         logging.warning(err)
-        logging.warning(''.join(traceback.format_tb(err.__traceback__)))
+        if hasattr(err, '__traceback__'):
+            logging.warning(''.join(traceback.format_tb(err.__traceback__)))
         send_error(Error.EINVAL, str(err) + '\n' + traceback.format_exc())
 
 def run_worker():
