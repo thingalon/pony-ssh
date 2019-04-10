@@ -17,7 +17,7 @@ export class DirectoryCache {
     private statCache: NodeCache;
     private listCache: NodeCache;
 
-    private unsafePathChars: RegExp = /[\/\\\:\*\?\"\<\>\|]/g;
+    private unsafePathChars: RegExp = /[\/\\\:\*\?\"\<\>\|\~]/g;
     private fileCacheBase: string;
     private fileCacheKey: Buffer | undefined;
 
