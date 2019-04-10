@@ -85,7 +85,7 @@ def handle_get_server_info(args):
     if cacheKey == None or len(cacheKey) < 64:
         cacheKeyIsNew = True
         cacheKey = os.urandom(32).encode('hex')
-        with open(cacheKeyFile, 'w') as keyFileHandle:
+        with open(cacheKeyFile, 'wb') as keyFileHandle:
             keyFileHandle.write(cacheKey)
 
     send_response_header({ 'cacheKey': cacheKey, 'newCacheKey': cacheKeyIsNew })
