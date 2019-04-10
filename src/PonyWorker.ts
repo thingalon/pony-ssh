@@ -6,6 +6,7 @@ import { Channel } from "ssh2";
 import { diffChars } from 'diff';
 import crypto = require( 'crypto' );
 import DiffMatchPatch = require( 'diff-match-patch' );
+import { EventEmitter } from 'events';
 
 export const HashMatch = Symbol( 'HashMatch' );
 
@@ -76,20 +77,24 @@ interface ParcelChunk {
 type ParcelConsumer = ( type: ParcelType, body: Buffer ) => boolean;
 type BodyCB = ( data: Buffer ) => void;
 
-export class PonyWorker {
+export class PonyWorker extends EventEmitter {
 
     protected connection: Connection;
-    private channel: Channel;
+    private channel?: Channel;
     private readBuffer : Buffer;
     private bufferMsgSize: number | undefined;
     private parcelConsumer: ParcelConsumer | undefined;
+    private closing: boolean;
 
     public constructor( connection: Connection, channel: Channel ) {
+        super();
+
         this.connection = connection;
         this.channel = channel;
         this.readBuffer = Buffer.alloc( 0 );
         this.bufferMsgSize = undefined;
         this.parcelConsumer = undefined;
+        this.closing = false;
 
         this.channel.stderr.on( 'data', this.onChannelStderr.bind( this ) );
         this.channel.on( 'data', this.onChannelData.bind( this ) );
@@ -327,6 +332,10 @@ export class PonyWorker {
     }
 
     protected sendMessage( opcode: Opcode, args: any ) {
+        if ( ! this.channel ) {
+            throw new Error( 'Attempt to send message after closing worker channel' );
+        }
+
         const data = this.packMessage( opcode, args );
         this.channel.write( data );
     }
@@ -337,9 +346,18 @@ export class PonyWorker {
         return Buffer.concat( [ header, packed ] );
     }
 
+    private close() {
+        this.closing = true;
+
+        if ( this.channel ) {
+            this.channel.close();
+            this.channel = undefined;
+        }
+    }
+
     private onChannelError( err: Error ) {
-        // TODO: gracefully close channel
-        console.error( err );
+        this.close();
+        this.emit( 'error', this, err );
     }
 
     private onChannelStderr( data: string ) {
@@ -347,8 +365,9 @@ export class PonyWorker {
     }
 
     private onChannelEnd() {
-        // TODO: Handle graceful close. For now treat all closures as rough.
-        this.onChannelError( new Error( 'Unexpected end of worker channel' ) );
+        if ( ! this.closing ) {
+            this.onChannelError( new Error( 'Unexpected end of worker channel' ) );
+        }
     }
 
     protected onParcel( type: ParcelType, body: Buffer ) {

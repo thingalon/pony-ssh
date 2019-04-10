@@ -80,7 +80,7 @@ export class Connection extends EventEmitter {
             await Promise.all( promises );
 
             // Put primary worker into the pool
-            this.workers.add( worker );
+            this.addWorkerToPool( worker );
 
             // Kick off up to 5 additional workers. Don't wait on this process.
             void this.startSecondaryWorkers();
@@ -324,12 +324,29 @@ export class Connection extends EventEmitter {
         } );
     }
 
+    private onPoolWorkerError( worker: PonyWorker, err: Error ) {
+        // TODO: Detect recoverable errors? 
+        // For now: Treat all worker channel errors as connection errors.
+        this.handleConnectionError( err );
+    }
+
+    private onWatchWorkerError( worker: PonyWorker, err: Error ) {
+        if ( worker === this.watchWorker ) {
+            this.watchWorker = undefined;
+        }
+    }
+
+    private addWorkerToPool( worker: PonyWorker ) {
+        worker.on( 'error', this.onPoolWorkerError.bind( this ) );
+        this.workers.add( worker );
+    }
+
     private async startSecondaryWorkers() {
         for ( let i = 0; i < 4; i++ ) {
             try {
                 const channel = await this.startWorkerChannel();
                 const worker = new PonyWorker( this, channel );
-                this.workers.add( worker );
+                this.addWorkerToPool( worker );
             } catch ( err ) {
                 break;
             }
@@ -340,6 +357,7 @@ export class Connection extends EventEmitter {
         try {
             const channel = await this.startWorkerChannel( [ 'watcher' ] );
             this.watchWorker = new WatchWorker( this, channel );
+            this.watchWorker.on( 'error', this.onWatchWorkerError );
         } catch ( err ) {
             console.warn( 'Failed to open worker for watching file changes: ' + err.message );
         }

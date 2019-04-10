@@ -30,6 +30,11 @@ export class PriorityPool<T> extends EventEmitter {
         this.checkin( item );
     }
 
+    public remove( item: T ) { 
+        this.allItems = this.allItems.filter( x => x !== item );
+        this.availableItems = this.availableItems.filter( x => x !== item );
+    }
+
     public async checkout( priority: number ): Promise<T> {
         return new Promise<T>( ( resolve, reject ) => {
             if ( this.availableItems.length > 0 ) {
@@ -45,6 +50,11 @@ export class PriorityPool<T> extends EventEmitter {
     }
 
     public checkin( item: T ) {
+        // Don't accept items that have been removed
+        if ( ! this.allItems.includes( item ) ) {
+            return;
+        }
+
         if ( this.waiters.length > 0 ) {
             const waiter = this.waiters.dequeue();
             return waiter.resolve( item );
