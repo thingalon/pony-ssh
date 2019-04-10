@@ -249,7 +249,7 @@ export class Connection extends EventEmitter {
     }
 
     private async parsePilotOutput( pilotOutput: string ) {
-        const matches = pilotOutput.match( /\[ponyssh-marker ([hnp])(?: ([a-zA-Z0-9]+)\s+.*)?\]/ );
+        const matches = pilotOutput.match( /\[ponyssh-marker ([hnp])(?: ([a-zA-Z0-9]+)(?:\s+.*)?)?\]/ );
         if ( ! matches ) {
             throw new Error( 'Invalid response from server' );
         }
