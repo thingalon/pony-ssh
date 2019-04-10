@@ -11,6 +11,7 @@
 	],
 	"activationEvents": [
 		"onFileSystem:ponyssh",
+		"onCommand:ponyssh.resetConnection",
 		"onCommand:ponyssh.openFolder"
 	],
 	"main": "./out/extension.js",
@@ -19,6 +20,11 @@
 			{
 				"command": "ponyssh.openFolder",
 				"title": "Open Remote Folder",
+				"category": "Pony SSH"
+			},
+			{
+				"command": "ponyssh.resetConnections",
+				"title": "Reset Connection(s)",
 				"category": "Pony SSH"
 			}
 		],
@@ -37,6 +43,9 @@
 			"commandPalette": [
 				{
 					"command": "ponyssh.openFolder"
+				},
+				{
+					"command": "ponyssh.resetConnections"
 				}
 			]
 		}

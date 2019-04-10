@@ -26,8 +26,12 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         this.cachePath = path.join( context.globalStoragePath, 'cache' );
     }
 
-    public getAvailableHosts() {
+    public getAvailableHosts(): { [name: string]: HostConfig; } {
         return this.availableHosts;
+    }
+
+    public getActiveHosts(): { [name: string]: Host } {
+        return this.activeHosts;
     }
 
     public async stat( uri: vscode.Uri ): Promise<vscode.FileStat> {
@@ -113,6 +117,12 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         }
 
         return this.activeHosts[ name ];
+    }
+
+    public resetHostConnection( name: string ) {
+        if ( this.activeHosts[ name ] ) {
+            this.activeHosts[ name ].resetConnection();
+        }
     }
 
     private splitPath( fullPath: string ): [ Host, string ] {

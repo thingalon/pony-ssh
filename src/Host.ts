@@ -31,6 +31,8 @@ export class Host {
     private connectionPromise: Promise<Connection> | undefined;
     private activeWatches: { [key: number]: HostWatch };
 
+    private connection?: Connection;
+
     constructor( cachePath: string, name: string, config: HostConfig ) {
         this.name = name;
         this.config = config;
@@ -43,6 +45,8 @@ export class Host {
             this.connectionPromise = new Promise<Connection>( async ( resolve, reject ) => {
                 try {
                     const connection = new Connection( this );
+                    this.connection = connection;
+
                     connection.on( 'error', this.handleConnectionError.bind( this ) );
 
                     await connection.connect();
@@ -58,6 +62,22 @@ export class Host {
         }
 
         return this.connectionPromise;
+    }
+
+    public async resetConnection()  {
+        // Don't wait on the old connection. Throw a close at it and leave it. 
+        if ( this.connectionPromise ) {
+            this.getConnection().then( ( connection: Connection ) => {
+                connection.close();
+            } );
+        }
+
+        this.connectionPromise = undefined;
+        
+        // Kick off a new connection attempt.
+        this.getConnection().catch( ( err ) => {
+            vscode.window.showWarningMessage( 'Failed to open connection to ' + this.name + ': ' + err.message );
+        } );
     }
 
     public async expandPath( priority: number, remotePath: string ): Promise<string> {
@@ -184,7 +204,12 @@ export class Host {
         }
     }
 
-    private handleConnectionError( err: Error ) {
+    private handleConnectionError( connection: Connection, err: Error ) {
+        // Ignore connection problems from a connection that has been discarded.
+        if ( this.connection !== connection ) {
+            return;
+        }
+
         this.connectionPromise = undefined;
         vscode.window.showErrorMessage( 'Connection error: ' + err.message );
     }

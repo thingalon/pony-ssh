@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import { PonyFileSystem } from './PonyFileSystem';
 import { StatusTicker } from './StatusTicker';
 
+interface ResetHostMenuItem extends vscode.QuickPickItem {
+	name?: string;
+	all?: boolean;
+}
+
 export function activate( context: vscode.ExtensionContext ) {
 	const ponyfs = new PonyFileSystem( context );
 	const provider = vscode.workspace.registerFileSystemProvider( 'ponyssh', ponyfs, { isCaseSensitive: true });
@@ -44,5 +49,31 @@ export function activate( context: vscode.ExtensionContext ) {
 		};
 
 		vscode.workspace.updateWorkspaceFolders( 0, 0, newFolder );
+	} ) );
+
+	context.subscriptions.push( vscode.commands.registerCommand( 'ponyssh.resetConnections', async _ => {
+		const activeHosts = ponyfs.getActiveHosts();
+		const names = Object.keys( activeHosts );
+
+		// Ask user to pick a host to reset (or all)
+		const choices: ResetHostMenuItem[] = [];
+		choices.push( { alwaysShow: true, label: 'Reset All Hosts', picked: true, all: true } );
+		choices.push( ...( Object.values( activeHosts ).map( ( host ) => {
+			return {
+				name: host.name,
+				label: host.name,
+				description: host.config.host
+			};
+		} ) ) );
+		const selection = await vscode.window.showQuickPick( choices, {
+			placeHolder: 'Select a host to reset (or all)',
+		} );
+
+		if ( selection ) {
+			const targets = selection.all ? names : [ selection.name! ];
+			for ( const target of targets ) {
+				ponyfs.resetHostConnection( target );
+			}
+		}
 	} ) );
 }

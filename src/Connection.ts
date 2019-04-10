@@ -90,7 +90,7 @@ export class Connection extends EventEmitter {
             // If any part of connecting fails, clean up leftovers.
             StatusTicker.showMessage( 'Error connecting to ' + this.host.name + '!' );
 
-            this.emit( 'error', err );
+            this.emit( 'error', this, err );
             this.close();
             throw( err );
         }
@@ -202,7 +202,7 @@ export class Connection extends EventEmitter {
 
     private handleConnectionError( err: Error ) {
         console.error( 'Connection error: ' + err.message );
-        this.emit( 'error', err );
+        this.emit( 'error', this, err );
         this.close();
     }
 
