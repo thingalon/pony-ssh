@@ -88,7 +88,11 @@ def handle_get_server_info(args):
         with open(cacheKeyFile, 'wb') as keyFileHandle:
             keyFileHandle.write(cacheKey)
 
-    send_response_header({ 'cacheKey': cacheKey, 'newCacheKey': cacheKeyIsNew })
+    send_response_header({
+        'home': os.path.expanduser('~'),
+        'cacheKey': cacheKey,
+        'newCacheKey': cacheKeyIsNew
+    })
 
 def handle_file_read(args):
     path = os.path.expanduser(args['path'])

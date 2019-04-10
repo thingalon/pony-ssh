@@ -33,7 +33,8 @@ const uploadCommand = '' +
     'f=open(d+"/worker.zip","w");' +
     'f.write(sys.stdin.read())';
 
-interface ServerInfo {
+export interface ServerInfo {
+    home: string;
     cacheKey: string;
     newCacheKey: boolean;
 }
@@ -113,6 +114,7 @@ export class Connection extends EventEmitter {
         const rawServerInfo = await worker.getServerInfo();
 
         this.serverInfo = {
+            home: rawServerInfo.home as string,
             cacheKey: rawServerInfo.cacheKey as string,
             newCacheKey: rawServerInfo.newCacheKey as boolean
         };  
