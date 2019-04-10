@@ -52,7 +52,7 @@ export class Host {
                     await connection.connect();
 
                     const serverInfo = connection.serverInfo!;
-                    await this.directoryCache.setFileCacheKey( Buffer.from( serverInfo.cacheKey, 'hex' ), serverInfo.newCacheKey );
+                    await this.directoryCache.setServerInfo( serverInfo );
 
                     resolve( connection );
                 } catch ( err ) {
@@ -122,18 +122,16 @@ export class Host {
     public async readFile( priority: number, remotePath: string ): Promise<Uint8Array> {
         const connection = await this.getConnection();
 
-        const cachedContent = await this.directoryCache.getFile( remotePath );
-        const cachedHash = cachedContent ? crypto.createHash( 'md5' ).update( cachedContent ).digest( 'hex' ) : undefined;
-
+        const cachedContent = await this.directoryCache.getFile( remotePath, true );
+        const cachedHash = cachedContent ? crypto.createHash( 'md5' ).update( cachedContent.content! ).digest( 'hex' ) : undefined;
         const content = await connection.readFile( priority, remotePath, cachedHash );
 
         if ( content instanceof Uint8Array ) {
             // Do not await setFile; it may be slow (it uses crypto.randomBytes)
             this.directoryCache.setFile( remotePath, content );
-
             return content;
-        } else if ( content === HashMatch ) {
-            return cachedContent!;
+        } else if ( cachedContent && content === HashMatch ) {
+            return cachedContent.content!;
         } else {
             throw new Error( 'Invalid response from connection.readFile: ' + content );
         }
@@ -144,10 +142,10 @@ export class Host {
 
         // See if this save can be abbreviated using a diff.
         if ( options.overwrite ) {
-            const originalContent = await this.directoryCache.getFile( remotePath );
-            if ( originalContent ) {
+            const cachedFile = await this.directoryCache.getFile( remotePath, true );
+            if ( cachedFile ) {
                 try {
-                    await connection.writeFileDiff( priority, remotePath, originalContent, data );
+                    await connection.writeFileDiff( priority, remotePath, cachedFile.content!, data );
                     this.directoryCache.setFile( remotePath, data );
                     return;
                 } catch ( err ) {
