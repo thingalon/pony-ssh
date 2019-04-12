@@ -3,6 +3,7 @@ import { PonyWorker, ParcelType, Opcode, ErrorCode } from "./PonyWorker";
 import { decode as msgpackDecode } from "msgpack-lite";
 import { Connection } from "./Connection";
 import { Channel } from "ssh2";
+import { WorkerError } from './WorkerError';
 
 enum ChangeType {
     CHANGED = 0x01,
@@ -28,7 +29,8 @@ export class WatchWorker extends PonyWorker {
                     break;
 
                 case ParcelType.ERROR:
-                    this.handleError( msgpackDecode( body ) as { code: ErrorCode, message: string } );
+                    const errorDetails = msgpackDecode( body ) as { code: ErrorCode, message: string };
+                    this.onChannelError( new WorkerError( errorDetails.code, errorDetails.message ) );
 
                 default:
                     this.onChannelError( new Error( 'Invalid parcel type received by watch worker: ' + type ) );
@@ -77,11 +79,6 @@ export class WatchWorker extends PonyWorker {
 
     private handleWarning( message: string ) {
         vscode.window.showWarningMessage( message, { modal: false } );
-    }
-
-    private handleError( err: { code: ErrorCode, message: string } ) {
-        vscode.window.showWarningMessage( 'Error while trying to watch for file changes: ' + err.message, { modal: false } );
-        // TODO: Tell the host that watching is no longer possible.
     }
 
 }
