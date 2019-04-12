@@ -31,11 +31,10 @@ export class WatchWorker extends PonyWorker {
                     this.handleError( msgpackDecode( body ) as { code: ErrorCode, message: string } );
 
                 default:
-                    this.handleWarning( 'Invalid parcel type received by Watch Worker: ' + type );
+                    this.onChannelError( new Error( 'Invalid parcel type received by watch worker: ' + type ) );
                     break;
             }
         } catch ( err ) {
-            // TODO: Handle this properly.
             console.warn( 'Error while parsing Watcher parcel: ' + err );   
         }
     }

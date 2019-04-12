@@ -354,7 +354,7 @@ export class PonyWorker extends EventEmitter {
         }
     }
 
-    private onChannelError( err: Error ) {
+    protected onChannelError( err: Error ) {
         this.close();
         this.emit( 'error', this, err );
     }
