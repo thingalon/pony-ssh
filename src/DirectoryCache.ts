@@ -2,11 +2,12 @@ import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import mkdirp = require('mkdirp-promise');
-import * as fs from 'fs';
+import * as fs from 'fs'; // TODO: Port to fs.promises when vscode moves to node 10.3
 import NodeCache = require('node-cache');
 import rmfr = require( 'rmfr' );
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { ServerInfo } from './Connection';
+import util = require( 'util' );
 
 enum WorkerFileType {
     FILE      = 0x01,
@@ -42,6 +43,9 @@ export class DirectoryCache {
             stdTTL: 10,
             checkperiod: 120,
         } );
+
+        // Kick off cache cleanup 10s after statup.
+        setTimeout( () => { this.cleanupCachedFiles(); }, 1000 * 10 );
     }
 
     public async setServerInfo( serverInfo: ServerInfo ) {
@@ -136,35 +140,21 @@ export class DirectoryCache {
     }
 
     public async getFile( remotePath: string, readContents: boolean ): Promise<CachedFile | undefined> {
+        const open = util.promisify( fs.open );
+        const read = util.promisify( fs.read );
+
         if ( ! this.fileCacheKey ) {
             return undefined;
         }
 
         try {
             const storagePath = this.fileCachePath( remotePath );
-
-            // TODO: Replace with fs.promise when the API stabilizes
-            const fd = await new Promise<number>( ( resolve, reject ) => {
-                fs.open( storagePath, 'r', ( err: Error, fd: number ) => {
-                    if ( err ) {
-                        reject( err );
-                    } else {
-                        resolve( fd );
-                    }
-                } );
-            } );
+            const fd = await open( storagePath, 'r' );
 
             const readBytes = async ( size: number ): Promise<Buffer> => {
-                return new Promise<Buffer>( ( resolve, reject ) => {
-                    const buffer = Buffer.alloc( size );
-                    fs.read( fd, buffer, 0, size, null, ( err, bytesRead ) => {
-                        if ( err ) {
-                            reject( err );
-                        } else {
-                            resolve( buffer.slice( 0, bytesRead ) );
-                        }
-                    } );
-                } );
+                const buffer = Buffer.alloc( size );
+                const { bytesRead } = await read( fd, buffer, 0, size, null );
+                return buffer.slice( 0, bytesRead );
             };
 
             // Read header
@@ -261,6 +251,61 @@ export class DirectoryCache {
 
         const pieces = remotePath.split( '/' ).filter( x => x ).map( this.stripPathPiece.bind( this ) );
         return path.join( this.fileCacheBase, 'files', ...pieces );
+    }
+
+    // Called occasionally on a timer, looks for old files and empty directories to purge.
+    private async cleanupCachedFiles() {
+        const readdir = util.promisify( fs.readdir );
+        const stat = util.promisify( fs.stat );
+        const unlink = util.promisify( fs.unlink );
+        const rmdir = util.promisify( fs.rmdir );
+        const mtimeCutoff = Date.now() - ( 1000 * 60 * 60 * 24 * 30 ); // 30 days. TODO: configurable?
+
+        // Handle directories recursively, returns true if self deleted.
+        const walk = async ( dir: string ): Promise<boolean> => {
+            const files = await readdir( dir );
+
+            let deleted = 0;
+            for ( const file of files ) {
+                const fullPath = path.join( dir, file );
+
+                try {
+                    const stats = await stat( fullPath );
+                    if ( stats.isDirectory() ) {
+                        // Recurse into child directories
+                        if ( await walk( fullPath ) ) {
+                            deleted++;
+                        }
+                    } else {
+                        // Delete files older than mtimeCutoff
+                        if ( stats.mtimeMs < mtimeCutoff ) {
+                            await unlink( fullPath );
+                            deleted++;
+                        }
+                    }
+                } catch ( err ){
+                    // Don't stop if a single entry fails, just warn and continue.
+                    console.warn( 'Error examining ' + fullPath + ' during cache cleanup' , err );
+                }
+            }
+
+            // If all children deleted, try to delete self and return true.
+            if ( deleted >= files.length ) {
+                await rmdir( dir );
+                return true;
+            } else {
+                return false;
+            }
+        };
+
+        try {
+            await walk( path.join( this.fileCacheBase, 'files' ) );
+        } catch ( err ) {
+            console.warn( 'Error while cleaning up cache directory', err );
+        }
+
+        // Re-run quietly once per hour.
+        setTimeout( () => { this.cleanupCachedFiles(); }, 1000 * 60 * 60 );
     }
 
 }
