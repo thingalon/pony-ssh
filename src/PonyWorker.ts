@@ -3,7 +3,6 @@ import { Connection } from "./Connection";
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
 import { Channel } from "ssh2";
-import { diffChars } from 'diff';
 import crypto = require( 'crypto' );
 import DiffMatchPatch = require( 'diff-match-patch' );
 import { EventEmitter } from 'events';
