@@ -131,6 +131,8 @@ export class Host {
             this.directoryCache.setFile( remotePath, content );
             return content;
         } else if ( cachedContent && content === HashMatch ) {
+            // Cache hit! Bump the mtime on the file so it won't get cleaned up. 
+            this.directoryCache.touchFile( remotePath );
             return cachedContent.content!;
         } else {
             throw new Error( 'Invalid response from connection.readFile: ' + content );

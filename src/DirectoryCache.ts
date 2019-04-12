@@ -216,6 +216,16 @@ export class DirectoryCache {
         }
     }
 
+    public touchFile( remotePath: string ) {
+        const storagePath = this.fileCachePath( remotePath );
+        const now = new Date();
+        fs.utimes( storagePath, now, now, ( err ) => {
+            if ( err ) {
+                console.warn( 'Failed to bump mtime on ' + storagePath, err );
+            }
+        } );
+    }
+
     private workerFileTypeToVscode( workerFileType: WorkerFileType ): vscode.FileType {
         let type: vscode.FileType = vscode.FileType.Unknown;
 
@@ -245,8 +255,8 @@ export class DirectoryCache {
     // Strip a remote path to make it friendly to store on most local filesystems
     private fileCachePath( remotePath: string ): string {
         // Always try to expand ~ to full home path for cache pathing.
-        if ( this.serverInfo && remotePath.startsWith( '~' ) ) {
-            remotePath = path.join( this.serverInfo.home, remotePath.slice( 1 ) );
+        if ( this.serverInfo && remotePath.startsWith( '~/' ) ) {
+            remotePath = this.serverInfo.home + remotePath.slice( 2 );
         }
 
         const pieces = remotePath.split( '/' ).filter( x => x ).map( this.stripPathPiece.bind( this ) );

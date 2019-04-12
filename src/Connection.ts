@@ -112,9 +112,11 @@ export class Connection extends EventEmitter {
 
     private async getServerInfo( worker: PonyWorker ): Promise<void> {
         const rawServerInfo = await worker.getServerInfo();
+        const rawHome = rawServerInfo.home as string;
+        const home = rawHome + ( rawHome.endsWith( '/' ) ? '' : '/' );
 
         this.serverInfo = {
-            home: rawServerInfo.home as string,
+            home: home,
             cacheKey: rawServerInfo.cacheKey as string,
             newCacheKey: rawServerInfo.newCacheKey as boolean
         };  
