@@ -123,7 +123,8 @@ export class Connection extends EventEmitter {
     }
 
     public close() {
-        // TODO: Clean up the connection here.
+        // Roughly close my socket. This will cause all workers to fail.
+        this.client.destroy();
     }
 
     public async expandPath( priority: number, remotePath: string ) {
@@ -329,7 +330,6 @@ export class Connection extends EventEmitter {
     }
 
     private onPoolWorkerError( worker: PonyWorker, err: Error ) {
-        // TODO: Detect recoverable errors? 
         // For now: Treat all worker channel errors as connection errors.
         this.handleConnectionError( err );
     }
