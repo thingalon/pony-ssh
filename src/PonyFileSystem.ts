@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { Host, HostConfig } from './Host';
 import path = require( 'path' );
+import fs = require( 'fs' ); // TODO: Port to fs.promises when vscode moves to Node 10.3
+import util = require( 'util' );
+import rimraf = require( 'rimraf' );
 
 export class PonyFileSystem implements vscode.FileSystemProvider {
 
@@ -24,6 +27,9 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         this.nextWatchId = 1;
 
         this.cachePath = path.join( context.globalStoragePath, 'cache' );
+
+        // Kick off a process 10s after startup to purge host caches that don't exist.
+        setTimeout( () => { this.purgeDeletedHostCaches(); }, 1000 * 10 );
     }
 
     public getAvailableHosts(): { [name: string]: HostConfig; } {
@@ -157,6 +163,36 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         }
 
         return hosts;
+    }
+
+    // Run once at startup, deletes cache directories for hosts that no longer exist.
+    private async purgeDeletedHostCaches() {
+        const readdir = util.promisify( fs.readdir );
+
+        try {
+            const cacheDirs = await readdir( this.cachePath );
+            for ( const hostName of cacheDirs ) {
+                if ( ! this.availableHosts[ hostName ] ) {
+                    const fullPath = path.join( this.cachePath, hostName );
+
+                    // Paranoid checks: rimraf recursively deletes directories. 
+                    // Make sure the path contains 'Code', 'pony-ssh' and 'cache'.
+                    for ( const keyword of [ 'Code', 'pony-ssh', 'cache' ] ) {
+                        if ( ! fullPath.includes( keyword ) ) {
+                            throw new Error( 'Cache folder does not contain expected strings: ' + fullPath );
+                        }
+                    }
+
+                    rimraf( fullPath, ( err ) => {
+                        if ( err ) {
+                            console.warn( 'Failed to delete cache folder for deleted host ' + fullPath, err );
+                        }
+                    } );
+                }
+            }
+        } catch ( err ) {
+            console.warn( 'Failed to purge cache folders from deleted hosts', err );
+        }
     }
 
     private fireSoon( ...events: vscode.FileChangeEvent[] ): void {
