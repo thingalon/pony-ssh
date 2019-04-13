@@ -176,13 +176,13 @@ export class Host {
     }
 
     public async addWatch( id: number, path: string, options: { recursive: boolean, excludes: string[] }, callback: ChangeCallback ) {
+        const connection = await this.getConnection();
+
         this.activeWatches[ id ] = {
             path: path,
             options: options,
             callback: callback
         };
-
-        const connection = await this.getConnection();
         await connection.addWatch( id, path, options );
     }
 
@@ -193,6 +193,10 @@ export class Host {
 
         const connection = await this.getConnection();
         await connection.rmWatch( id );
+    }
+
+    public getActiveWatches(): { [key: number]: HostWatch } {
+        return this.activeWatches;
     }
 
     private async cacheLs( priority: number, remotePath: string ) {

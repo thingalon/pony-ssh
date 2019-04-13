@@ -362,6 +362,14 @@ export class Connection extends EventEmitter {
             const channel = await this.startWorkerChannel( [ 'watcher' ] );
             this.watchWorker = new WatchWorker( this, channel );
             this.watchWorker.on( 'error', this.onWatchWorkerError );
+
+            // If this is a reconnection, re-establish any active watches from the host.
+            const watches = this.host.getActiveWatches();
+            const promises = [];
+            for ( const [ watchId, watch ] of Object.entries( watches ) ) {
+                promises.push( this.addWatch( parseInt( watchId ), watch.path, watch.options ))
+            }
+            await Promise.all( promises );
         } catch ( err ) {
             console.warn( 'Failed to open worker for watching file changes: ' + err.message );
         }
