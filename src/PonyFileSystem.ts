@@ -160,7 +160,8 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
                 path: configHost.path,
                 python: configHost.python,
                 privateKey: configHost.privateKey,
-                privateKeyFile: configHost.privateKeyFile
+                privateKeyFile: configHost.privateKeyFile,
+                passphrase: configHost.passphrase,
             };
         }
 
