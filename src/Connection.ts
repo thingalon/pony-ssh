@@ -386,7 +386,7 @@ export class Connection extends EventEmitter {
             const watches = this.host.getActiveWatches();
             const promises = [];
             for ( const [ watchId, watch ] of Object.entries( watches ) ) {
-                promises.push( this.addWatch( parseInt( watchId ), watch.path, watch.options ))
+                promises.push( this.addWatch( parseInt( watchId ), watch.path, watch.options ) );
             }
             await Promise.all( promises );
         } catch ( err ) {
