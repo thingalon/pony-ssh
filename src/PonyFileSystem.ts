@@ -159,6 +159,8 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
                 agent: configHost.agent || ( configHost.password ? undefined : defaultAgent ),
                 path: configHost.path,
                 python: configHost.python,
+                privateKey: configHost.privateKey,
+                privateKeyFile: configHost.privateKeyFile
             };
         }
 

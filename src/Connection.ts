@@ -6,6 +6,11 @@ import { PriorityPool } from "./PriorityPool";
 import { WatchWorker } from "./WatchWorker";
 import { EventEmitter } from "events";
 import { StatusTicker } from "./StatusTicker";
+import fs = require( 'fs' );
+import util = require( 'util' );
+import * as vscode from 'vscode';
+import path = require( 'path' );
+import expandHomeDir = require( 'expand-home-dir' );
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = '' +
@@ -212,7 +217,21 @@ export class Connection extends EventEmitter {
     }
 
     private async openConnection() {
-        return new Promise( ( resolve, reject ) => {
+        // Is the private key provided as a file? Load it.
+        if ( this.config.privateKeyFile ) {
+            const readFile = util.promisify( fs.readFile );
+            this.config.privateKey = await readFile( expandHomeDir( this.config.privateKeyFile ), { 'encoding': 'latin1' } );
+        }
+
+        // Ask for a passphrase if none provided (and the key looks encrypted)
+        if ( this.config.privateKey && ! this.config.passphrase && this.config.privateKey.includes( 'ENCRYPTED' ) ) {
+            this.config.passphrase = await vscode.window.showInputBox( {
+                password: true,
+                prompt: 'Please enter your SSH key passphrase:',
+            } );
+        }
+
+        return new Promise( async ( resolve, reject ) => {
             this.client.on( 'error', reject );
 
             this.client.on( 'ready', () => {
