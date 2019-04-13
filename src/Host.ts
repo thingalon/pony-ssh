@@ -15,7 +15,6 @@ export interface HostConfig {
 
 type ChangeCallback = ( host: string, path: string, type: vscode.FileChangeType ) => void;
 
-// TODO: On re-connection after lost connections, re-establish previously requested watches.
 interface HostWatch {
     path: string;
     options: { recursive: boolean, excludes: string[] };
