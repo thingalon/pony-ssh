@@ -9,7 +9,6 @@ import { StatusTicker } from "./StatusTicker";
 import fs = require( 'fs' );
 import util = require( 'util' );
 import * as vscode from 'vscode';
-import path = require( 'path' );
 import expandHomeDir = require( 'expand-home-dir' );
 import { log } from "./Log";
 const shellEscape = require( 'shell-escape' );
