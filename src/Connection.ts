@@ -243,6 +243,16 @@ export class Connection extends EventEmitter {
             sshConfig.agent = ( 'win32' === process.platform ? 'pageant' : process.env.SSH_AUTH_SOCK );
         }
 
+        // If agent is set to an environment variable (eg: $SSH_AUTH_SOCK), unravel it.
+        if ( typeof this.config.agent === 'string' && this.config.agent.startsWith( '$' ) ) {
+            const envVariable = this.config.agent.substr( 1 );
+            if ( ! process.env[ envVariable ] ) {
+                throw new Error( 'Invalid agent setting; environment variable not found: ' + envVariable );
+            }
+
+            sshConfig.agent = process.env[ envVariable ];
+        }
+
         // Is the private key provided as a file? Load it.
         if ( this.config.privateKeyFile ) {
             const readFile = util.promisify( fs.readFile );
