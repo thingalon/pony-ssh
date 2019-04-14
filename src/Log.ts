@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import util = require( 'util' );
-import { HostConfig } from './Host';
 
 export enum LoggingLevel {
     error = 0,
