@@ -33,6 +33,10 @@ class Log {
         }
     }
 
+    public includesLevel( level: LoggingLevel ) {
+        return ( this.loggingLevel >= level );
+    }
+
     public show() {
         this.outputChannel.show( false );
     }

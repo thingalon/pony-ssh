@@ -1,5 +1,5 @@
 import { HostConfig, Host } from "./Host";
-import { Client, Channel} from 'ssh2';
+import { Client, Channel, ConnectConfig} from 'ssh2';
 import { WorkerScript } from "./WorkerScript";
 import { PonyWorker } from "./PonyWorker";
 import { PriorityPool } from "./PriorityPool";
@@ -10,7 +10,7 @@ import fs = require( 'fs' );
 import util = require( 'util' );
 import * as vscode from 'vscode';
 import expandHomeDir = require( 'expand-home-dir' );
-import { log } from "./Log";
+import { log, LoggingLevel } from "./Log";
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = '' +
@@ -227,18 +227,25 @@ export class Connection extends EventEmitter {
     }
 
     private async openConnection() {
+        const sshConfig: ConnectConfig = Object.assign( {}, this.config );
+
         // Is the private key provided as a file? Load it.
         if ( this.config.privateKeyFile ) {
             const readFile = util.promisify( fs.readFile );
-            this.config.privateKey = await readFile( expandHomeDir( this.config.privateKeyFile ), { 'encoding': 'latin1' } );
+            sshConfig.privateKey = await readFile( expandHomeDir( this.config.privateKeyFile ), { 'encoding': 'latin1' } );
         }
 
         // Ask for a passphrase if none provided (and the key looks encrypted)
-        if ( this.config.privateKey && ! this.config.passphrase && this.config.privateKey.includes( 'ENCRYPTED' ) ) {
-            this.config.passphrase = await vscode.window.showInputBox( {
+        if ( sshConfig.privateKey && ! sshConfig.passphrase && sshConfig.privateKey.includes( 'ENCRYPTED' ) ) {
+            sshConfig.passphrase = await vscode.window.showInputBox( {
                 password: true,
                 prompt: 'Please enter your SSH key passphrase:',
             } );
+        }
+
+        // Set a debug callback if logging level is debug.
+        if ( log.includesLevel( LoggingLevel.debug ) ) {
+            sshConfig.debug = ( message: string ) => { log.debug( message ) };
         }
 
         return new Promise( async ( resolve, reject ) => {
@@ -252,8 +259,8 @@ export class Connection extends EventEmitter {
                 resolve();
             } );
 
-            log.info( 'Connecting to ' + this.host.name + ': ', this.config );
-            this.client.connect( this.config );
+            log.info( 'Connecting to ' + this.host.name + ': ', sshConfig );
+            this.client.connect( sshConfig );
         } );
     }
     
