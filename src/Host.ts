@@ -212,14 +212,19 @@ export class Host {
         }
     }
 
-    private handleConnectionError( connection: Connection, err: Error ) {
+    private async handleConnectionError( connection: Connection, err: Error ) {
         // Ignore connection problems from a connection that has been discarded.
         if ( this.connection !== connection ) {
             return;
         }
 
         this.connectionPromise = undefined;
-        vscode.window.showErrorMessage( 'Connection error: ' + err.message );
+
+        const showLogOption: vscode.MessageItem = { title: 'Show Log' };
+        const response = await vscode.window.showErrorMessage<vscode.MessageItem>( 'Connection error: ' + err.message, showLogOption );
+        if ( response === showLogOption ) {
+            log.show();
+        }
     }
 
     public handleChangeNotice( watchId: number, path: string, type: vscode.FileChangeType ) {

@@ -34,6 +34,10 @@ class Log {
         }
     }
 
+    public show() {
+        this.outputChannel.show( false );
+    }
+
     public debug( ...messages: any[] ) {
         this.log( LoggingLevel.debug, ...messages );
     }
