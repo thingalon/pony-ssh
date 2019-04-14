@@ -39,21 +39,79 @@
 			"type": "object",
 			"title": "Pony SSH Configuration",
 			"properties": {
-				"ponyssh.hosts": {
-					"type": "object",
-					"default": {},
-					"description": "Available hosts to connect to"
-				},
 				"ponyssh.logging": {
 					"type": "string",
 					"default": "info",
 					"description": "Logging level",
-					"enum": [
-						"debug",
-						"info",
-						"warn",
-						"error"
-					]
+					"enum": [ "debug", "info", "warn", "error" ]
+				},
+
+				"ponyssh.hosts": {
+					"title": "TITLE SSH Hosts",
+					"description": "DESCRIPTION SSH Hosts",
+					"type": "object",
+					"default": {
+						"example": {
+							"host": "example.com",
+							"username": "nobody",
+							"agent": true
+						}
+					},
+
+					"patternProperties": {
+						".*": {
+							"type": "object",
+							"required": [ "host", "username" ],
+
+							"properties": {
+								"host": {
+									"type": "string",
+									"description": "Hostname or IP address for connection."
+								},
+								"port": {
+									"type": "number",
+									"description": "Port on remote host to connect through.",
+									"default": 22
+								},
+								"path": {
+									"type": "string",
+									"description": "Default path on remote host to open.",
+									"default": "~"
+								},
+								"username": {
+									"type": "string",
+									"description": "Username for authentication."
+								},
+								"password": {
+									"type": [ "string", "boolean" ],
+									"description": "Password for authentication, or set to `true` to prompt each time.",
+									"default": true
+								},
+								"agent": {
+									"type": [ "string", "boolean" ],
+									"description": "SSH Agent to use for authentication. Set to `true` for automatic best guess, set to `pageant` on Windows, or `$SSH_SOCK_PATH` on OSX and Linux",
+									"default": true
+								},
+								"privateKey": {
+									"type": "string",
+									"description": "Private key to use for authentication"
+								},
+								"privateKeyFile": {
+									"type": "string",
+									"description": "Path to a PEM-formatted SSH private key for authentication.",
+									"default": "~/.ssh/id_rsa"
+								},
+								"passphrase": {
+									"type": "string",
+									"description": "Passphrase used for decrypting private key specified by `privateKey` or `privateKeyFile`"
+								},
+								"python": {
+									"type": "string",
+									"description": "Path to python 2.7 or 3.x to use for remote worker script. Leave out for default python"
+								}
+							}
+						}
+					}
 				}
 			}
 		},

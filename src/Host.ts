@@ -8,14 +8,15 @@ import { log } from "./Log";
 
 export interface HostConfig {
     host: string;
-    username: string;
-    agent?: string;
+    port: number;
     path?: string;
-    python?: string;
-    password?: string;
+    username: string;
+    password?: string | boolean;
+    agent?: string | boolean;
     privateKey?: string;
-    passphrase?: string;
     privateKeyFile?: string;
+    passphrase?: string;
+    python?: string;
 }
 
 type ChangeCallback = ( host: string, path: string, type: vscode.FileChangeType ) => void;

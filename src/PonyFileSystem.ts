@@ -148,22 +148,10 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
     private loadHostConfigs(): { [name: string]: HostConfig } {
         const hosts: { [name: string]: HostConfig } = {};
 
-        const defaultAgent = ( 'win32' === process.platform ? 'pageant' : process.env.SSH_AUTH_SOCK );
-
         const config = vscode.workspace.getConfiguration( 'ponyssh' );
         const configHosts = config && config.hosts || {};
         for ( const name in configHosts ) {
-            const configHost = configHosts[ name ];
-            hosts[ name ] = {
-                host: configHost.host,
-                username: configHost.username,
-                agent: configHost.agent || ( configHost.password ? undefined : defaultAgent ),
-                path: configHost.path,
-                python: configHost.python,
-                privateKey: configHost.privateKey,
-                privateKeyFile: configHost.privateKeyFile,
-                passphrase: configHost.passphrase,
-            };
+            hosts[ name ] = configHosts[ name ] as HostConfig;
         }
 
         return hosts;

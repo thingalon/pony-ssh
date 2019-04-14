@@ -227,7 +227,21 @@ export class Connection extends EventEmitter {
     }
 
     private async openConnection() {
-        const sshConfig: ConnectConfig = Object.assign( {}, this.config );
+        // Re-shape the HostConfig into an ssh2 config object.
+        const sshConfig: ConnectConfig = Object.assign( {}, this.config ) as ConnectConfig;
+
+        // If password is `true`, prompt for one.
+        if ( this.config.password === true ) {
+            sshConfig.password = await vscode.window.showInputBox( {
+                password: true,
+                prompt: 'Please enter your SSH password for ' + this.host.name + ':'
+            } );
+        }
+
+        // If agent is `true`, or is `undefined` and no password is set, try to set a sensible default. 
+        if ( this.config.agent === true || this.config.agent === undefined && ! this.config.password ) {
+            sshConfig.agent = ( 'win32' === process.platform ? 'pageant' : process.env.SSH_AUTH_SOCK );
+        }
 
         // Is the private key provided as a file? Load it.
         if ( this.config.privateKeyFile ) {
