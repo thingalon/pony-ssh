@@ -75,6 +75,8 @@ export class Connection extends EventEmitter {
             StatusTicker.showMessage( 'Initializing ' + this.host.name + '...' );
             await this.prepareWorkerScript();
 
+            log.info( 'Opening workers' );
+
             // Open one primary worker.
             const channel = await this.startWorkerChannel();
             const worker = new PonyWorker( this, channel );
@@ -91,6 +93,7 @@ export class Connection extends EventEmitter {
             // Kick off up to 5 additional workers. Don't wait on this process.
             void this.startSecondaryWorkers();
 
+            log.info( 'Connected to ' + this.host.name );
             StatusTicker.showMessage( 'Connected to ' + this.host.name + '!' );
         } catch ( err ) {
             // If any part of connecting fails, clean up leftovers.
@@ -276,6 +279,7 @@ export class Connection extends EventEmitter {
                     try {
                         const workerOk = this.parsePilotOutput( buffer );
                         log.debug( 'Worker script check result: ', workerOk );
+                        resolve( workerOk );
                     } catch ( err ) {
                         reject( err );
                     }
