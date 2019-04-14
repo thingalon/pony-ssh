@@ -8,6 +8,7 @@ import rmfr = require( 'rmfr' );
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { ServerInfo } from './Connection';
 import util = require( 'util' );
+import { log } from './Log';
 
 enum WorkerFileType {
     FILE      = 0x01,
@@ -200,7 +201,7 @@ export class DirectoryCache {
         } catch ( err ) {
             // Ignore ENOENT errors; they just mean the file is not cached. :)
             if ( err.code !== 'ENOENT' ) {
-                console.warn( 'Error while reading cached file: ', err );
+                log.warn( 'Error while reading cached file: ', err );
             }
             return undefined;
         }
@@ -211,7 +212,7 @@ export class DirectoryCache {
         const now = new Date();
         fs.utimes( storagePath, now, now, ( err ) => {
             if ( err ) {
-                console.warn( 'Failed to bump mtime on ' + storagePath, err );
+                log.warn( 'Failed to bump mtime on ' + storagePath + ': ', err );
             }
         } );
     }
@@ -285,7 +286,7 @@ export class DirectoryCache {
                     }
                 } catch ( err ){
                     // Don't stop if a single entry fails, just warn and continue.
-                    console.warn( 'Error examining ' + fullPath + ' during cache cleanup' , err );
+                    log.warn( 'Error examining ' + fullPath + ' during cache cleanup: ' , err );
                 }
             }
 
@@ -301,7 +302,7 @@ export class DirectoryCache {
         try {
             await walk( path.join( this.fileCacheBase, 'files' ) );
         } catch ( err ) {
-            console.warn( 'Error while cleaning up cache directory', err );
+            log.warn( 'Error while cleaning up cache directory: ', err );
         }
 
         // Re-run quietly once per hour.

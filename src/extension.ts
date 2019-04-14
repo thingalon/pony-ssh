@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { PonyFileSystem } from './PonyFileSystem';
 import { StatusTicker } from './StatusTicker';
+import { log } from './Log';
 
 interface ResetHostMenuItem extends vscode.QuickPickItem {
 	name?: string;
@@ -13,6 +14,7 @@ export function activate( context: vscode.ExtensionContext ) {
     context.subscriptions.push( provider );
 
 	StatusTicker.initialize();
+	log.initialize();
 
 	context.subscriptions.push( vscode.commands.registerCommand( 'ponyssh.openFolder', async _ => {
 		const availableHosts = ponyfs.getAvailableHosts();
@@ -43,6 +45,8 @@ export function activate( context: vscode.ExtensionContext ) {
 		const fullPath = 'ponyssh:/' + hostName + leadingSlashPath;
 		const displayName = hostName + ':' + ( remotePath.startsWith( '~' ) ? remotePath : leadingSlashPath );
 
+		log.info( 'Opening remote folder: ' + fullPath );
+
 		const newFolder = {
 			name: displayName,
 			uri: vscode.Uri.parse( fullPath ),
@@ -57,7 +61,7 @@ export function activate( context: vscode.ExtensionContext ) {
 
 		// Ask user to pick a host to reset (or all)
 		const choices: ResetHostMenuItem[] = [];
-		choices.push( { alwaysShow: true, label: 'Reset All Hosts', picked: true, all: true } );
+		choices.push( { alwaysShow: true, name: 'All', label: 'Reset All Hosts', picked: true, all: true } );
 		choices.push( ...( Object.values( activeHosts ).map( ( host ) => {
 			return {
 				name: host.name,
@@ -70,6 +74,8 @@ export function activate( context: vscode.ExtensionContext ) {
 		} );
 
 		if ( selection ) {
+			log.info( 'Resetting connection(s): ' + selection.name! );
+
 			const targets = selection.all ? names : [ selection.name! ];
 			for ( const target of targets ) {
 				ponyfs.resetHostConnection( target );

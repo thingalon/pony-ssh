@@ -4,6 +4,7 @@ import path = require( 'path' );
 import fs = require( 'fs' ); // TODO: Port to fs.promises when vscode moves to Node 10.3
 import util = require( 'util' );
 import rimraf = require( 'rimraf' );
+import { log } from './Log';
 
 export class PonyFileSystem implements vscode.FileSystemProvider {
 
@@ -188,13 +189,13 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
 
                     rimraf( fullPath, ( err ) => {
                         if ( err ) {
-                            console.warn( 'Failed to delete cache folder for deleted host ' + fullPath, err );
+                            log.warn( 'Failed to delete cache folder for deleted host ' + fullPath + ': ', err );
                         }
                     } );
                 }
             }
         } catch ( err ) {
-            console.warn( 'Failed to purge cache folders from deleted hosts', err );
+            log.warn( 'Failed to purge cache folders from deleted hosts: ', err );
         }
     }
 

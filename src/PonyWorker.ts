@@ -6,6 +6,7 @@ import { Channel } from "ssh2";
 import crypto = require( 'crypto' );
 import DiffMatchPatch = require( 'diff-match-patch' );
 import { EventEmitter } from 'events';
+import { log } from './Log';
 
 export const HashMatch = Symbol( 'HashMatch' );
 
@@ -237,8 +238,7 @@ export class PonyWorker extends EventEmitter {
                 this.onParcel( parcelType, message );
             }
         } catch ( err ) {
-            console.log( 'Error parsing channel data: ' );
-            console.log( err );
+            log.error( 'Error parsing channel data: ', err );
             this.onChannelError( err );
         }
     }
@@ -304,7 +304,7 @@ export class PonyWorker extends EventEmitter {
                     case ParcelType.ENDOFBODY:
                         if ( header !== undefined ) {
                             if ( bodyLength !== header.length ) {
-                                console.warn( 'Warning: Header said ' + header.length + ' bytes, body was ' + bodyLength + 'bytes' );
+                                log.warn( 'Warning: Header said ' + header.length + ' bytes, body was ' + bodyLength + 'bytes' );
                             }
                             resolve( header! );
                         } else {
@@ -313,7 +313,7 @@ export class PonyWorker extends EventEmitter {
                         return false;
                     
                     default:
-                        console.warn( 'Unexpected parcel type: ' + type );
+                        log.warn( 'Unexpected parcel type: ', type );
                         return false;
                 }
             } );
@@ -360,7 +360,7 @@ export class PonyWorker extends EventEmitter {
     }
 
     private onChannelStderr( data: string ) {
-        console.log( 'Channel STDERR: ' + data );
+        log.warn( 'Channel STDERR output: ', data );
     }
 
     private onChannelEnd() {

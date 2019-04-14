@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import path = require( 'path' );
 import * as crypto from 'crypto';
 import { HashMatch } from "./PonyWorker";
+import { log } from "./Log";
 
 export interface HostConfig {
     host: string;
@@ -11,6 +12,7 @@ export interface HostConfig {
     agent?: string;
     path?: string;
     python?: string;
+    password?: string;
     privateKey?: string;
     passphrase?: string;
     privateKeyFile?: string;
@@ -153,7 +155,7 @@ export class Host {
                     this.directoryCache.setFile( remotePath, data );
                     return;
                 } catch ( err ) {
-                    console.warn( 'Saving w/ diffing failed, going to retry with full write: ' + err.message );
+                    log.info( 'Saving w/ diffing failed, going to retry with full write: ', err );
                 }
             }
         }

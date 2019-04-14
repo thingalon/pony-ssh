@@ -4,6 +4,7 @@ import { decode as msgpackDecode } from "msgpack-lite";
 import { Connection } from "./Connection";
 import { Channel } from "ssh2";
 import { WorkerError } from './WorkerError';
+import { log } from './Log';
 
 enum ChangeType {
     CHANGED = 0x01,
@@ -37,7 +38,7 @@ export class WatchWorker extends PonyWorker {
                     break;
             }
         } catch ( err ) {
-            console.warn( 'Error while parsing Watcher parcel: ' + err );   
+            log.warn( 'Error while parsing Watcher parcel: ' + err );   
         }
     }
 

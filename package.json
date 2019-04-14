@@ -43,6 +43,17 @@
 					"type": "object",
 					"default": {},
 					"description": "Available hosts to connect to"
+				},
+				"ponyssh.logging": {
+					"type": "string",
+					"default": "info",
+					"description": "Logging level",
+					"enum": [
+						"debug",
+						"info",
+						"warn",
+						"error"
+					]
 				}
 			}
 		},

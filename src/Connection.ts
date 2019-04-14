@@ -11,6 +11,7 @@ import util = require( 'util' );
 import * as vscode from 'vscode';
 import path = require( 'path' );
 import expandHomeDir = require( 'expand-home-dir' );
+import { log } from "./Log";
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = '' +
@@ -96,6 +97,7 @@ export class Connection extends EventEmitter {
             // If any part of connecting fails, clean up leftovers.
             StatusTicker.showMessage( 'Error connecting to ' + this.host.name + '!' );
 
+            log.error( 'Error connecting to ' + this.host.name + ': ', err );
             this.emit( 'error', this, err );
             this.close();
             throw( err );
@@ -103,6 +105,8 @@ export class Connection extends EventEmitter {
     }
 
     private async prepareWorkerScript() {
+        log.info( 'Preparing worker script' );
+
         // Verify worker script
         let workerScriptOk = await this.verifyWorkerScript();
         if ( ! workerScriptOk ) {
@@ -113,6 +117,8 @@ export class Connection extends EventEmitter {
                 throw new Error( 'Hash mis-match after successfully uploading worker zip' );
             }
         }
+
+        log.info( 'Worker script ok' );
     }
 
     private async getServerInfo( worker: PonyWorker ): Promise<void> {
@@ -124,7 +130,9 @@ export class Connection extends EventEmitter {
             home: home,
             cacheKey: rawServerInfo.cacheKey as string,
             newCacheKey: rawServerInfo.newCacheKey as boolean
-        };  
+        }; 
+
+        log.info( 'Remote home directory: ', this.serverInfo.home );
     }
 
     public close() {
@@ -211,7 +219,7 @@ export class Connection extends EventEmitter {
     }
 
     private handleConnectionError( err: Error ) {
-        console.error( 'Connection error: ' + err.message );
+        log.error( 'Connection error: ', err );
         this.emit( 'error', this, err );
         this.close();
     }
@@ -237,15 +245,19 @@ export class Connection extends EventEmitter {
             this.client.on( 'ready', () => {
                 this.client.removeListener( 'error', reject );
                 this.client.on( 'error', this.handleConnectionError );
+
+                log.info( 'Connection established' );
                 resolve();
             } );
 
+            log.info( 'Connecting to ' + this.host.name + ': ', this.config );
             this.client.connect( this.config );
         } );
     }
     
-    private async verifyWorkerScript() {
+    private async verifyWorkerScript(): Promise<boolean> {
         return new Promise( ( resolve, reject ) => {
+            log.debug( 'Verifying worker script' );
             const command = shellEscape( [ 'sh', '-c', pilotCommand ] );
             this.client.exec( command, ( err, channel ) => {
                 if ( err ) {
@@ -258,12 +270,13 @@ export class Connection extends EventEmitter {
                 } );
 
                 channel.stderr.on( 'data', ( data: string ) => {
-                    console.log( 'STDERR: ' + data );
+                    log.debug( 'STDERR: ', data );
                 } );
 
                 channel.on( 'close', () => {
                     try {
-                        resolve( this.parsePilotOutput( buffer ) );
+                        const workerOk = this.parsePilotOutput( buffer );
+                        log.debug( 'Worker script check result: ', workerOk );
                     } catch ( err ) {
                         reject( err );
                     }
@@ -302,30 +315,33 @@ export class Connection extends EventEmitter {
             const pythonCommand = shellEscape( [ this.pythonCommand(), '-c', uploadCommand ] );
             const shellCommand = shellEscape( [ 'sh', '-c', pythonCommand ] );
 
+            log.debug( 'Opening upload channel for worker script' );
             this.client.exec( shellCommand, async ( err, channel ) => {
                 if ( err ) {
                     return reject( err );
                 }
 
                 channel.on( 'data', ( data: string ) => {
-                    console.log( 'STDOUT during upload: ' + data );
+                    log.warn( 'STDOUT output during worker upload: ', data );
                 } );
 
                 let stderr = '';
                 channel.stderr.on( 'data', ( data: string ) => {
                     stderr += data;
-                    console.log( 'STDERR during upload: ' + data );
+                    log.warn( 'STDERR output during worker upload: ', data );
                 } );
 
                 channel.on( 'close', ( code:  number ) => {
                     if ( 0 !== code ) {
                         reject( new Error( 'Error code ' + code + ' while uploading worker script. STDERR says: ' + stderr ) );
                     } else {
+                        log.debug( 'Successfully uploaded worker script' );
                         resolve();
                     }
                 } );
 
                 // Send worker script up via STDIN.
+                log.debug( 'Uploading worker script' );
                 const workerScript = await WorkerScript.load();
                 channel.stdin.write( workerScript.getData() );
                 channel.stdin.end();
@@ -390,7 +406,7 @@ export class Connection extends EventEmitter {
             }
             await Promise.all( promises );
         } catch ( err ) {
-            console.warn( 'Failed to open worker for watching file changes: ' + err.message );
+            log.warn( 'Failed to open worker for watching file changes: ', err.message );
         }
     }
 
