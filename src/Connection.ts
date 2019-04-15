@@ -269,7 +269,7 @@ export class Connection extends EventEmitter {
 
         // Set a debug callback if logging level is debug.
         if ( log.includesLevel( LoggingLevel.debug ) ) {
-            sshConfig.debug = ( message: string ) => { log.debug( message ) };
+            sshConfig.debug = ( message: string ) => { log.debug( message ); };
         }
 
         return new Promise( async ( resolve, reject ) => {
