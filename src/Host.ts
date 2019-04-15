@@ -45,6 +45,13 @@ export class Host {
         this.activeWatches = {};
     }
 
+    public setConfig( config: HostConfig ) {
+        if ( JSON.stringify( config ) !== JSON.stringify( this.config ) ) {
+            this.config = config;
+            this.resetConnection();
+        }
+    }
+
     public async getConnection(): Promise<Connection> {
         if ( ! this.connectionPromise ) {
             this.connectionPromise = new Promise<Connection>( async ( resolve, reject ) => {

@@ -20,7 +20,7 @@ class Log {
         this.loggingLevel = LoggingLevel.info;
     }
 
-    public initialize() {
+    public loadConfiguration() {
         const config = vscode.workspace.getConfiguration( 'ponyssh' );
         if ( ! config || ! config.logging ) {
             return;

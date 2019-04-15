@@ -145,6 +145,15 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         return [ host, remotePath ];
     }
 
+    public reloadHostConfigs() {
+        const updatedConfigs = this.loadHostConfigs();
+
+        this.availableHosts = Object.assign( this.availableHosts, updatedConfigs );
+        for ( const [ hostName, host ] of Object.entries( this.activeHosts ) ) {
+            host.setConfig( updatedConfigs[ hostName ] );
+        }
+    }
+
     private loadHostConfigs(): { [name: string]: HostConfig } {
         const hosts: { [name: string]: HostConfig } = {};
 

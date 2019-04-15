@@ -14,7 +14,17 @@ export function activate( context: vscode.ExtensionContext ) {
     context.subscriptions.push( provider );
 
 	StatusTicker.initialize();
-	log.initialize();
+	log.loadConfiguration();
+
+	context.subscriptions.push( vscode.workspace.onDidChangeConfiguration( ( event ) => {
+		if ( event.affectsConfiguration( 'ponyssh.hosts' ) ) {
+			ponyfs.reloadHostConfigs();
+		}
+
+		if ( event.affectsConfiguration( 'ponyssh.logging' ) ) {
+			log.loadConfiguration();
+		}
+	} ) );
 
 	context.subscriptions.push( vscode.commands.registerCommand( 'ponyssh.openFolder', async _ => {
 		const availableHosts = ponyfs.getAvailableHosts();
