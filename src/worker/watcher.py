@@ -50,8 +50,9 @@ class Watcher:
                 child = os.path.join(path, name)
                 is_dir = not os.path.islink(child) and os.path.isdir(child)
                 if is_dir and name != '.pony-ssh' and not any(regex.match(child) for regex in excludes):
-                    for child_path in self.find_paths(child, True, excludes):
-                        yield child_path
+                    if os.access(child, os.R_OK):
+                        for child_path in self.find_paths(child, True, excludes):
+                            yield child_path
 
     def add_watch(self, watch_id, path, recursive, excludes):
         collapse_home = (path[0] == '~')
