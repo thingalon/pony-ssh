@@ -62,7 +62,9 @@ export function activate( context: vscode.ExtensionContext ) {
 			uri: vscode.Uri.parse( fullPath ),
 		};
 
-		vscode.workspace.updateWorkspaceFolders( 0, 0, newFolder );
+		const position = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0;
+		vscode.workspace.updateWorkspaceFolders( position, 0, newFolder );
+		vscode.commands.executeCommand( 'workbench.view.explorer' );
 	} ) );
 
 	context.subscriptions.push( vscode.commands.registerCommand( 'ponyssh.resetConnections', async _ => {
