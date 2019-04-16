@@ -160,6 +160,10 @@ export class PonyFileSystem implements vscode.FileSystemProvider {
         const config = vscode.workspace.getConfiguration( 'ponyssh' );
         const configHosts = config && config.hosts || {};
         for ( const name in configHosts ) {
+            if ( name === 'example' && configHosts[ name ].host === 'example.com' ) {
+                continue;
+            }
+
             hosts[ name ] = configHosts[ name ] as HostConfig;
         }
 
