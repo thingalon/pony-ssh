@@ -80,7 +80,7 @@ Ask for a password each time you connect:
 Load a private key from a file:
 ```
  "ponyssh.hosts": { 
-    "example-password-auth": {
+    "example-private-key": {
        "host": "example.com",
        "username": "my-login",
        "privateKeyFile": "~/.ssh/my_key"
