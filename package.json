@@ -3,6 +3,7 @@
 	"displayName": "Pony SSH",
 	"description": "Blazingly fast SSH editing for Visual Studio Code",
 	"homepage": "https://github.com/thingalon/pony-ssh/blob/master/README.md",
+	"publisher": "thingalon",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/thingalon/pony-ssh.git"
@@ -47,8 +48,7 @@
 				},
 
 				"ponyssh.hosts": {
-					"title": "TITLE SSH Hosts",
-					"description": "DESCRIPTION SSH Hosts",
+					"description": "SSH Host Configuration",
 					"type": "object",
 					"default": {
 						"example": {
