@@ -1,3 +1,5 @@
+import ctypes
+import errno
 import logging
 import os
 import select
@@ -67,7 +69,17 @@ class Watcher:
         for watch_path in self.find_paths(path, recursive, regex_excludes):
             watch_wd = self.libc.inotify_add_watch(self.inotify_fd, watch_path.encode('latin-1'), self.libc.IN_ALL_CHANGES)
             if watch_wd < 0:
-                send_warning('Failed to watch ' + watch_path)
+                error = ctypes.get_errno()
+                error_string = os.strerror(error)
+
+                if error == errno.ENOSPC or error == errno.ENOMEM:
+                    # Kernel has no more space for watches. Give up.
+                    send_warning('Too many directories to watch. The remote system has reached its limit for inotify watches. ' +
+                        'Please increase the watcher limit on your remote system, or consider adding patterns to your "Watcher ' + 
+                        'Exclude" setting in Visual Studio Code to reduce the number of folders watched.')
+                    return
+
+                send_warning('Failed to watch ' + watch_path + ': ' + error_string)
             else:
                 self.watch_ids[watch_id].append(watch_wd)
                 self.watch_descriptors[watch_wd] = (watch_id, path, collapse_home)

@@ -27,7 +27,7 @@ class Libc:
         if libc_path is None:
             libc_path = 'libc.so.6'
 
-        lib = ctypes.cdll.LoadLibrary(libc_path)
+        lib = ctypes.CDLL(libc_path, use_errno=True)
         if lib is None:
             raise ImportError('Failed to load libc for inotify functionality')
 
