@@ -260,6 +260,7 @@ export class DirectoryCache {
         const stat = util.promisify( fs.stat );
         const unlink = util.promisify( fs.unlink );
         const rmdir = util.promisify( fs.rmdir );
+        const exists = util.promisify( fs.exists );
         const mtimeCutoff = Date.now() - ( 1000 * 60 * 60 * 24 * 30 ); // 30 days. TODO: configurable?
 
         // Handle directories recursively, returns true if self deleted.
@@ -300,7 +301,11 @@ export class DirectoryCache {
         };
 
         try {
-            await walk( path.join( this.fileCacheBase, 'files' ) );
+            const cacheBase = path.join( this.fileCacheBase, 'files' );
+
+            if ( await exists( cacheBase ) ) {
+                await walk( cacheBase );
+            }
         } catch ( err ) {
             log.warn( 'Error while cleaning up cache directory: ', err );
         }
