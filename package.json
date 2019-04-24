@@ -8,7 +8,7 @@
 		"type": "git",
 		"url": "https://github.com/thingalon/pony-ssh.git"
 	},
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"license": "MIT",
 	"icon": "media/pony-ssh-logo.png",
 	"engines": {
@@ -44,9 +44,13 @@
 					"type": "string",
 					"default": "info",
 					"description": "Logging level",
-					"enum": [ "debug", "info", "warn", "error" ]
+					"enum": [
+						"debug",
+						"info",
+						"warn",
+						"error"
+					]
 				},
-
 				"ponyssh.hosts": {
 					"description": "SSH Host Configuration",
 					"type": "object",
@@ -57,12 +61,13 @@
 							"agent": true
 						}
 					},
-
 					"patternProperties": {
 						".*": {
 							"type": "object",
-							"required": [ "host", "username" ],
-
+							"required": [
+								"host",
+								"username"
+							],
 							"properties": {
 								"host": {
 									"type": "string",
@@ -83,12 +88,18 @@
 									"description": "Username for authentication."
 								},
 								"password": {
-									"type": [ "string", "boolean" ],
+									"type": [
+										"string",
+										"boolean"
+									],
 									"description": "Password for authentication, or set to `true` to prompt each time.",
 									"default": true
 								},
 								"agent": {
-									"type": [ "string", "boolean" ],
+									"type": [
+										"string",
+										"boolean"
+									],
 									"description": "SSH Agent to use for authentication. Set to `true` for automatic best guess, set to `pageant` on Windows, or `$SSH_SOCK_PATH` on OSX and Linux",
 									"default": true
 								},
