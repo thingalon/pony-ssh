@@ -108,6 +108,8 @@ export class DirectoryCache {
         }
 
         try {
+            this.clearStat( remotePath );
+
             const storagePath = this.fileCachePath( remotePath );
             await mkdirp( path.dirname( storagePath ) );
 
