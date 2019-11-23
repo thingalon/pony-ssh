@@ -122,7 +122,7 @@
 								},
 								"shell": {
 									"type": "string",
-									"description": "Override the shell to use when executing commands. Command will be passed to the shell as the last argument as a string",
+									"description": "Shell to use when executing remote commands. Include any command line arguments needed to pass your shell a command to execute. Each command to execute will get appended to your shell string. eg: `sh -c` or `sudo sh -c`",
 									"default": "sh -c"
 								}
 							}
