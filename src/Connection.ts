@@ -346,7 +346,6 @@ export class Connection extends EventEmitter {
 
     private wrapShellCommand( args: string[] ): string {
         const escapedArgs = shellEscape( args );
-        log.debug( this.config );
 
         if ( this.config.shell ) {
             return this.config.shell + ' ' + escapedArgs;
