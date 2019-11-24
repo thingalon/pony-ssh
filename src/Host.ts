@@ -17,6 +17,7 @@ export interface HostConfig {
     privateKeyFile?: string;
     passphrase?: string;
     python?: string;
+    shell?: string;
 }
 
 type ChangeCallback = ( host: string, path: string, type: vscode.FileChangeType ) => void;

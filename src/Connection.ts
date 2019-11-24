@@ -291,7 +291,7 @@ export class Connection extends EventEmitter {
     private async verifyWorkerScript(): Promise<boolean> {
         return new Promise( ( resolve, reject ) => {
             log.debug( 'Verifying worker script' );
-            const command = shellEscape( [ 'sh', '-c', pilotCommand ] );
+            const command = this.wrapShellCommand( [ pilotCommand ] );
             this.client.exec( command, ( err, channel ) => {
                 if ( err ) {
                     return reject( err );
@@ -344,10 +344,20 @@ export class Connection extends EventEmitter {
         }
     }
 
+    private wrapShellCommand( args: string[] ): string {
+        const escapedArgs = shellEscape( args );
+
+        if ( this.config.shell ) {
+            return this.config.shell + ' ' + escapedArgs;
+        } else {
+            return 'sh -c ' + escapedArgs;
+        }
+    }
+
     private async uploadWorkerScript() {
         return new Promise( ( resolve, reject ) => {
             const pythonCommand = shellEscape( [ this.pythonCommand(), '-c', uploadCommand ] );
-            const shellCommand = shellEscape( [ 'sh', '-c', pythonCommand ] );
+            const shellCommand = this.wrapShellCommand( [ pythonCommand ] );
 
             log.debug( 'Opening upload channel for worker script' );
             this.client.exec( shellCommand, async ( err, channel ) => {
@@ -386,7 +396,7 @@ export class Connection extends EventEmitter {
     private async startWorkerChannel( args: string[] = [] ): Promise<Channel> {
         return new Promise<Channel>( ( resolve, reject ) => {
             const pythonCommand = shellEscape( [ this.pythonCommand() ] ) + ' ~/.pony-ssh/worker.zip ' + shellEscape( args );
-            const shellCommand = shellEscape( [ 'sh', '-c', pythonCommand ] );
+            const shellCommand = this.wrapShellCommand( [ pythonCommand ] );
 
             this.client.exec( shellCommand, async ( err, channel ) => {
                 if ( err ) {
