@@ -80,6 +80,7 @@ export class Connection extends EventEmitter {
             // Open one primary worker.
             const channel = await this.startWorkerChannel();
             const worker = new PonyWorker( this, channel );
+            worker.on( 'error', this.onPoolWorkerError.bind( this ) );
 
             // Start a secondary worker for Watching, grab server info. Can be done in parallel(ish)
             const promises: Promise<void>[] = [];
@@ -277,7 +278,7 @@ export class Connection extends EventEmitter {
 
             this.client.on( 'ready', () => {
                 this.client.removeListener( 'error', reject );
-                this.client.on( 'error', this.handleConnectionError );
+                this.client.on( 'error', this.handleConnectionError.bind( this ) );
 
                 log.info( 'Connection established' );
                 resolve();
@@ -298,12 +299,12 @@ export class Connection extends EventEmitter {
                 }
 
                 let buffer = '';
-                channel.on( 'data', ( data: string ) => {
+                channel.on( 'data', ( data: Buffer ) => {
                     buffer += data;
                 } );
 
-                channel.stderr.on( 'data', ( data: string ) => {
-                    log.debug( 'STDERR: ', data );
+                channel.stderr.on( 'data', ( data: Buffer ) => {
+                    log.debug( 'STDERR: ', data.toString() );
                 } );
 
                 channel.on( 'close', () => {
@@ -365,14 +366,14 @@ export class Connection extends EventEmitter {
                     return reject( err );
                 }
 
-                channel.on( 'data', ( data: string ) => {
-                    log.warn( 'STDOUT output during worker upload: ', data );
+                channel.on( 'data', ( data: Buffer ) => {
+                    log.warn( 'STDOUT output during worker upload: ', data.toString() );
                 } );
 
                 let stderr = '';
-                channel.stderr.on( 'data', ( data: string ) => {
+                channel.stderr.on( 'data', ( data: Buffer ) => {
                     stderr += data;
-                    log.warn( 'STDERR output during worker upload: ', data );
+                    log.warn( 'STDERR output during worker upload: ', data.toString() );
                 } );
 
                 channel.on( 'close', ( code:  number ) => {
@@ -420,7 +421,9 @@ export class Connection extends EventEmitter {
     }
 
     private addWorkerToPool( worker: PonyWorker ) {
+        worker.removeAllListeners( 'error' );
         worker.on( 'error', this.onPoolWorkerError.bind( this ) );
+
         this.workers.add( worker );
     }
 

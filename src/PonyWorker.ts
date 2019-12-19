@@ -359,8 +359,12 @@ export class PonyWorker extends EventEmitter {
         this.emit( 'error', this, err );
     }
 
-    private onChannelStderr( data: string ) {
-        log.warn( 'Channel STDERR output: ', data );
+    private onChannelStderr( data: Buffer ) {
+        const stringData = data.toString();
+
+        if ( stringData.trim().length > 0 ) {
+            log.warn( 'Channel STDERR output: ', stringData );
+        }
     }
 
     private onChannelEnd() {
