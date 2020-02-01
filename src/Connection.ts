@@ -13,10 +13,10 @@ import expandHomeDir = require( 'expand-home-dir' );
 import { log, LoggingLevel } from "./Log";
 const shellEscape = require( 'shell-escape' );
 
-const pilotCommand = '' +
+const pilotCommand = ( pythonCommand: string ) => '' +
     'F=~/.pony-ssh/worker.zip;' +
     'M="ponyssh-mar""ker";' +
-    'if command -v python >/dev/null;then ' +
+    `if command -v ${pythonCommand} >/dev/null;then ` +
         'if [ -e $F ];then ' +
             'if [ $( which md5 ) ];then ' +
                 'H=`cat $F|md5`;' +
@@ -292,7 +292,7 @@ export class Connection extends EventEmitter {
     private async verifyWorkerScript(): Promise<boolean> {
         return new Promise( ( resolve, reject ) => {
             log.debug( 'Verifying worker script' );
-            const command = this.wrapShellCommand( [ pilotCommand ] );
+            const command = this.wrapShellCommand( [ pilotCommand( this.pythonCommand() ) ] );
             this.client.exec( command, ( err, channel ) => {
                 if ( err ) {
                     return reject( err );
