@@ -1,3 +1,8 @@
+## [0.4.0] - 2020-02-05
+### Fixed
+- Use configured python command during initial connection setup
+- Python 3 compatibility fixes for uploading new worker scripts
+
 ## [0.3.0] - 2019-12-18
 ### Fixed
 - Ensure that errors that occur on the primary worker channel during connection are properly caught
