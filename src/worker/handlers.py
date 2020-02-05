@@ -1,4 +1,5 @@
 from collections import deque
+import binascii
 import hashlib
 import logging
 import os
@@ -84,7 +85,7 @@ def handle_get_server_info(args):
 
     if cacheKey == None or len(cacheKey) < 64:
         cacheKeyIsNew = True
-        cacheKey = os.urandom(32).encode('hex')
+        cacheKey = binascii.hexlify(os.urandom(32))
         with open(cacheKeyFile, 'wb') as keyFileHandle:
             keyFileHandle.write(cacheKey)
 

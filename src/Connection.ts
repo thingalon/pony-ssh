@@ -35,8 +35,8 @@ const uploadCommand = '' +
     'import os,sys;' +
     'd=os.path.expanduser("~/.pony-ssh");' +
     'os.path.exists(d) or os.mkdir(d);' +
-    'f=open(d+"/worker.zip","w");' +
-    'f.write(sys.stdin.read())';
+    'f=open(d+"/worker.zip","wb");' +
+    'f.write(sys.stdin.buffer.read() if sys.version_info >= (3, 0) else sys.stdin.read())';
 
 export interface ServerInfo {
     home: string;
