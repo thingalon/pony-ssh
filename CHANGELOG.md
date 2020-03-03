@@ -1,3 +1,7 @@
+## [0.5.0] - 2020-03-03
+### Fixed
+- Catch errors generated while reading private key file, and display them properly
+
 ## [0.4.0] - 2020-02-05
 ### Fixed
 - Use configured python command during initial connection setup
