@@ -284,8 +284,12 @@ export class Connection extends EventEmitter {
                 resolve();
             } );
 
-            log.info( 'Connecting to ' + this.host.name + ': ', sshConfig );
-            this.client.connect( sshConfig );
+            try {
+                log.info( 'Connecting to ' + this.host.name + ': ', sshConfig );
+                this.client.connect( sshConfig );
+            } catch ( err ) {
+                reject( err );
+            }
         } );
     }
     
