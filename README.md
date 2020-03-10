@@ -43,7 +43,7 @@ Each host can be configured with the following options:
 - `agent` - Specify which SSH agent to use for connection, or enter `true` (without quotes) to use a sensible default. (see below)
 - `privateKey` - Your private key for authentication.
 - `privateKeyFile` - Specify a file containing your private key for authentication. eg: `~/.ssh/id_rsa`.
-- `passphrase` - Enter a passphrase for decrypting your private key. If left blank, Pony SSH will prompt you for a passphrase if needed. **Note:** Storing passphrases in plaintext in your Settings file is insecure.
+- `passphrase` - Enter a passphrase for decrypting your private key. If left blank, Pony SSH will prompt you for a passphrase if needed. Set to `true` to force Pony SSH to always prompt for the passphrase.  **Note:** Storing passphrases in plaintext in your Settings file is insecure.
 - `python` - Specify the full path to your python installation on your remote host. *Default: Your system default python installation*
 - `shell` - Specify a shell to use when executing remote commands. Include any command line arguments needed to pass your shell a command to execute. Each command to execute will get appended to your shell string. eg: `sh -c` or `sudo sh -c`. *Default: `sh -c`*
 
