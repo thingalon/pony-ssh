@@ -15,7 +15,7 @@ export interface HostConfig {
     agent?: string | boolean;
     privateKey?: string;
     privateKeyFile?: string;
-    passphrase?: string;
+    passphrase?: string | boolean;
     python?: string;
     shell?: string;
 }

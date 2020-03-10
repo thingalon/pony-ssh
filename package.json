@@ -113,7 +113,10 @@
 									"default": "~/.ssh/id_rsa"
 								},
 								"passphrase": {
-									"type": "string",
+									"type": [
+										"string",
+										"boolean"
+									],
 									"description": "Passphrase used for decrypting private key specified by `privateKey` or `privateKeyFile`"
 								},
 								"python": {

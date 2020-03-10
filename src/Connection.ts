@@ -261,11 +261,14 @@ export class Connection extends EventEmitter {
         }
 
         // Ask for a passphrase if none provided (and the key looks encrypted)
-        if ( sshConfig.privateKey && ! sshConfig.passphrase && sshConfig.privateKey.includes( 'ENCRYPTED' ) ) {
-            sshConfig.passphrase = await vscode.window.showInputBox( {
-                password: true,
-                prompt: 'Please enter your SSH key passphrase:',
-            } );
+        if ( sshConfig.privateKey ) {
+            const keyLooksEncrypted = sshConfig.privateKey.includes( 'ENCRYPTED' );
+            if ( sshConfig.passphrase === true || ( ! sshConfig.passphrase && keyLooksEncrypted ) ) {
+                sshConfig.passphrase = await vscode.window.showInputBox( {
+                    password: true,
+                    prompt: 'Please enter your SSH key passphrase:',
+                } );
+            }
         }
 
         // Set a debug callback if logging level is debug.
