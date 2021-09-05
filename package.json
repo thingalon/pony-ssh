@@ -155,27 +155,27 @@
 		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"devDependencies": {
-		"@types/node": "^10.14.4",
-		"@types/ssh2": "^0.5.38",
-		"bestzip": "^2.1.7",
+		"@types/node": "^10.17.60",
+		"@types/ssh2": "^0.5.48",
+		"bestzip": "^2.2.0",
 		"if-newer": "^1.0.2",
-		"tslint": "^5.12.1",
-		"typescript": "^3.3.1",
-		"vscode": "^1.1.28"
+		"tslint": "^5.20.1",
+		"typescript": "^3.9.10",
+		"vscode": "^1.1.37"
 	},
 	"dependencies": {
 		"@types/mkdirp-promise": "^5.0.0",
-		"@types/msgpack-lite": "^0.1.6",
-		"@types/node-cache": "^4.1.3",
-		"@types/rimraf": "^2.0.2",
-		"diff-match-patch": "^1.0.4",
+		"@types/msgpack-lite": "^0.1.8",
+		"@types/node-cache": "^4.2.5",
+		"@types/rimraf": "^2.0.5",
+		"diff-match-patch": "^1.0.5",
 		"expand-home-dir": "0.0.3",
 		"mkdirp-promise": "^5.0.1",
 		"msgpack-lite": "^0.1.26",
-		"node-cache": "^4.2.0",
+		"node-cache": "^4.2.1",
 		"rmfr": "^2.0.0",
 		"shell-escape": "^0.2.0",
-		"ssh2": "^0.8.2",
+		"ssh2": "^0.8.9",
 		"ts-priority-queue": "^0.1.1"
 	}
 }
