@@ -227,7 +227,7 @@ export class Connection extends EventEmitter {
         this.close();
     }
 
-    private async openConnection() {
+    private async openConnection(): Promise< void > {
         // Re-shape the HostConfig into an ssh2 config object.
         const sshConfig: ConnectConfig = Object.assign( {}, this.config ) as ConnectConfig;
 
@@ -362,7 +362,7 @@ export class Connection extends EventEmitter {
         }
     }
 
-    private async uploadWorkerScript() {
+    private async uploadWorkerScript(): Promise< void > {
         return new Promise( ( resolve, reject ) => {
             const pythonCommand = shellEscape( [ this.pythonCommand(), '-c', uploadCommand ] );
             const shellCommand = this.wrapShellCommand( [ pythonCommand ] );
