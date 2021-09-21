@@ -175,7 +175,7 @@
 		"node-cache": "^4.2.1",
 		"rmfr": "^2.0.0",
 		"shell-escape": "^0.2.0",
-		"ssh2": "^0.8.9",
+		"ssh2": "^1.4.0",
 		"ts-priority-queue": "^0.1.1"
 	}
 }
