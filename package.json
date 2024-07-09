@@ -157,7 +157,7 @@
 	"devDependencies": {
 		"@types/node": "^10.17.60",
 		"@types/ssh2": "^0.5.48",
-		"bestzip": "^2.2.0",
+		"bestzip": "^2.2.1",
 		"if-newer": "^1.0.2",
 		"tslint": "^5.20.1",
 		"typescript": "^3.9.10",
@@ -175,7 +175,7 @@
 		"node-cache": "^4.2.1",
 		"rmfr": "^2.0.0",
 		"shell-escape": "^0.2.0",
-		"ssh2": "^0.8.9",
+		"ssh2": "^1.15.0",
 		"ts-priority-queue": "^0.1.1"
 	}
 }
