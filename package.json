@@ -148,7 +148,7 @@
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"maybecompile:worker": "mkdirp out && if-newer \"src/worker/**/*\" out/worker.zip \"npm run compile:worker\"",
-		"compile:worker": "cd src/worker && bestzip ../../out/worker.zip *",
+		"compile:worker": "npm-build-zip --source=src/worker --destination=out --name=worker --name_only=1",
 		"compile:ts": "tsc -p ./",
 		"compile": "npm run compile:ts && npm run compile:worker",
 		"watch": "tsc -watch -p ./",
@@ -157,8 +157,8 @@
 	"devDependencies": {
 		"@types/node": "^10.17.60",
 		"@types/ssh2": "^0.5.48",
-		"bestzip": "^2.2.1",
 		"if-newer": "^1.0.2",
+		"npm-build-zip": "^1.0.4",
 		"tslint": "^5.20.1",
 		"typescript": "^3.9.10",
 		"vscode": "^1.1.37"
