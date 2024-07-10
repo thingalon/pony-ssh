@@ -7,6 +7,7 @@ import crypto = require( 'crypto' );
 import DiffMatchPatch = require( 'diff-match-patch' );
 import { EventEmitter } from 'events';
 import { log } from './Log';
+import { ensureError } from './tools';
 
 export const HashMatch = Symbol( 'HashMatch' );
 
@@ -239,7 +240,7 @@ export class PonyWorker extends EventEmitter {
             }
         } catch ( err ) {
             log.error( 'Error parsing channel data: ', err );
-            this.onChannelError( err );
+            this.onChannelError( ensureError( err ) );
         }
     }
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import * as path from 'path';
-import mkdirp = require('mkdirp-promise');
+import { mkdirp } from 'mkdirp';
 import * as fs from 'fs'; // TODO: Port to fs.promises when vscode moves to node 10.3
 import NodeCache = require('node-cache');
 import rmfr = require( 'rmfr' );
@@ -9,6 +9,7 @@ import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { ServerInfo } from './Connection';
 import util = require( 'util' );
 import { log } from './Log';
+import { ensureError } from './tools';
 
 enum WorkerFileType {
     FILE      = 0x01,
@@ -138,7 +139,7 @@ export class DirectoryCache {
 
             await writePromise;
         } catch ( err ) {
-            vscode.window.showWarningMessage( 'Failed to cache file ' + remotePath + ': ' + err.message, { modal: false } );
+            vscode.window.showWarningMessage( 'Failed to cache file ' + remotePath + ': ' + ensureError( err ).message, { modal: false } );
         }
     }
 
@@ -200,9 +201,10 @@ export class DirectoryCache {
 
             cachedFile.content = decrypted;
             return cachedFile;
-        } catch ( err ) {
+        } catch ( e ) {
+            const err = ensureError( e );
             // Ignore ENOENT errors; they just mean the file is not cached. :)
-            if ( err.code !== 'ENOENT' ) {
+            if ( 'code' in err && err.code !== 'ENOENT' ) {
                 log.warn( 'Error while reading cached file: ', err );
             }
             return undefined;

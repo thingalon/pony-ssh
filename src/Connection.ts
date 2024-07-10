@@ -11,6 +11,7 @@ import util = require( 'util' );
 import * as vscode from 'vscode';
 import expandHomeDir = require( 'expand-home-dir' );
 import { log, LoggingLevel } from "./Log";
+import { ensureError } from "./tools";
 const shellEscape = require( 'shell-escape' );
 
 const pilotCommand = ( pythonCommand: string ) => '' +
@@ -460,7 +461,7 @@ export class Connection extends EventEmitter {
             }
             await Promise.all( promises );
         } catch ( err ) {
-            log.warn( 'Failed to open worker for watching file changes: ', err.message );
+            log.warn( 'Failed to open worker for watching file changes: ', ensureError( err ).message );
         }
     }
 
