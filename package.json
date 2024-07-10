@@ -2,17 +2,17 @@
 	"name": "pony-ssh",
 	"displayName": "Pony SSH",
 	"description": "Blazingly fast SSH editing for Visual Studio Code",
+	"version": "0.5.0",
 	"homepage": "https://github.com/thingalon/pony-ssh/blob/master/README.md",
 	"publisher": "thingalon",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/thingalon/pony-ssh.git"
 	},
-	"version": "0.5.0",
 	"license": "MIT",
 	"icon": "media/pony-ssh-logo.png",
 	"engines": {
-		"vscode": "^1.32.0"
+		"vscode": "^1.91.0"
 	},
 	"categories": [
 		"Other"
@@ -151,17 +151,16 @@
 		"compile:worker": "npm-build-zip --source=src/worker --destination=out --name=worker --name_only=1",
 		"compile:ts": "tsc -p ./",
 		"compile": "npm run compile:ts && npm run compile:worker",
-		"watch": "tsc -watch -p ./",
-		"postinstall": "node ./node_modules/vscode/bin/install"
+		"watch": "tsc -watch -p ./"
 	},
 	"devDependencies": {
 		"@types/node": "^10.17.60",
 		"@types/ssh2": "^0.5.48",
+		"@types/vscode": "^1.91.0",
 		"if-newer": "^1.0.2",
 		"npm-build-zip": "^1.0.4",
 		"tslint": "^5.20.1",
-		"typescript": "^5.5.3",
-		"vscode": "^1.1.37"
+		"typescript": "^5.5.3"
 	},
 	"dependencies": {
 		"@types/msgpack-lite": "^0.1.8",
