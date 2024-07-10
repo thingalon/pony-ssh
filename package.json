@@ -18,9 +18,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onFileSystem:ponyssh",
-		"onCommand:ponyssh.resetConnections",
-		"onCommand:ponyssh.openFolder"
+		"onFileSystem:ponyssh"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
