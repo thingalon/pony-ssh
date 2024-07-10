@@ -145,8 +145,10 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
-		"maybecompile:worker": "mkdirp out && if-newer \"src/worker/**/*\" out/worker.zip \"npm run compile:worker\"",
-		"compile:worker": "npm-build-zip --source=src/worker --destination=out --name=worker --name_only=1",
+		"maybecompile:worker": "mkdirp out && if-newer \"src/worker/python/**/*\" out/worker.zip \"npm run compile:worker\"",
+		"compile:py-worker": "npm-build-zip --source=src/worker/python --destination=out --name=worker --name_only=1",
+		"compile:php-worker": "php -d 'phar.readonly=Off' build-php-worker.php",
+		"compile:worker": "npm run compile:py-worker && npm run compile:php-worker",
 		"compile:ts": "tsc -p ./",
 		"compile": "npm run compile:ts && npm run compile:worker",
 		"watch": "tsc -watch -p ./"
