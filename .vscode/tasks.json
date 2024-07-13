@@ -27,9 +27,9 @@
 			},
 		},
 		{
-			"label": "maybecompile:worker",
+			"label": "maybe-compile:worker",
 			"type": "npm",
-			"script": "maybecompile:worker",
+			"script": "maybe-compile:worker",
 			"isBackground": false,
 			"presentation": {
 				"reveal": "always"
@@ -42,7 +42,7 @@
 		{
 			"label": "buildall",
 			"dependsOn": [
-				"maybecompile:worker",
+				"maybe-compile:worker",
 				"compile:ts"
 			]
 		}
