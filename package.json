@@ -153,7 +153,8 @@
 		"compile:ts": "tsc -p ./",
 		"maybe-compile:worker": "npm-run-all -p maybe-compile:worker-*",
 		"maybe-compile:worker-py": "mkdirp out && if-newer \"src/worker/python/**/*\" out/worker.zip 'npm run compile:worker-py'",
-		"maybe-compile:worker-php": "mkdirp out && if-newer \"src/worker/php/**/*\" out/worker.phar 'npm run compile:worker-php'"
+		"maybe-compile:worker-php": "mkdirp out && if-newer \"src/worker/php/**/*\" out/worker.phar 'npm run compile:worker-php'",
+    	"test": "vscode-test"
 	},
 	"devDependencies": {
 		"@types/msgpack-lite": "^0.1.8",

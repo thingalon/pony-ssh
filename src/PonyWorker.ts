@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { Connection } from "./Connection";
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
 import { Channel } from "ssh2";
@@ -80,17 +79,15 @@ type BodyCB = ( data: Buffer ) => void;
 
 export class PonyWorker extends EventEmitter {
 
-    protected connection: Connection;
     private channel?: Channel;
     private readBuffer : Buffer;
     private bufferMsgSize: number | undefined;
     private parcelConsumer: ParcelConsumer | undefined;
     private closing: boolean;
 
-    public constructor( connection: Connection, channel: Channel ) {
+    public constructor( channel: Channel ) {
         super();
 
-        this.connection = connection;
         this.channel = channel;
         this.readBuffer = Buffer.alloc( 0 );
         this.bufferMsgSize = undefined;

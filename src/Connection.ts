@@ -80,7 +80,7 @@ export class Connection extends EventEmitter {
 
             // Open one primary worker.
             const channel = await this.startWorkerChannel();
-            const worker = new PonyWorker( this, channel );
+            const worker = new PonyWorker( channel );
             worker.on( 'error', this.onPoolWorkerError.bind( this ) );
 
             // Start a secondary worker for Watching, grab server info. Can be done in parallel(ish)
@@ -439,7 +439,7 @@ export class Connection extends EventEmitter {
         for ( let i = 0; i < 4; i++ ) {
             try {
                 const channel = await this.startWorkerChannel();
-                const worker = new PonyWorker( this, channel );
+                const worker = new PonyWorker( channel );
                 this.addWorkerToPool( worker );
             } catch ( err ) {
                 break;

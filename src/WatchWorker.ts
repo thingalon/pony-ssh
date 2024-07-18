@@ -14,8 +14,8 @@ enum ChangeType {
 
 export class WatchWorker extends PonyWorker {
 
-    constructor( connection: Connection, channel: Channel ) {
-        super( connection, channel );
+    constructor( private connection: Connection, channel: Channel ) {
+        super( channel );
     }
 
     protected onParcel( type: ParcelType, body: Buffer ) {
