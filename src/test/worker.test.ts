@@ -1,60 +1,58 @@
 import * as assert from 'assert';
 import { ChildProcess, spawn } from 'child_process';
-import msgpack from 'msgpack-lite';
-import { Opcode } from '../PonyWorker';
+import { ChannelInterface, Opcode, PonyWorker } from '../PonyWorker';
+import path from 'path';
+import os from 'os';
+import { mkdirp } from 'mkdirp';
 // import * as vscode from 'vscode';
 // import * as myExtension from '../../extension';
 
-class WorkerProcess {
+class LocalWorker implements ChannelInterface {
 
-	/*private buffer: Buffer = Buffer.alloc( 0 );
+	public static async start( command: string, args: string[] ) {
+		const home = path.join( os.tmpdir(), `pony-ssh-test-${ Date.now() }` );
+		await mkdirp( home );
 
-	public static start( command: string, args: string[] ) {
-		const worker = spawn( command, args );
-		return new WorkerProcess( worker );
+		const env = { ...process.env, HOME: home };
+		const worker = spawn( command, args, { env } );
+
+		return new LocalWorker( worker, home );
 	}
 
-	private constructor( private readonly worker: ChildProcess ) {
-		this.worker.stdout.on( 'data', this.onStdOut.bind( this ) );
-		this.worker.stderr.on( 'data', this.onStdErr.bind( this ) );
-		this.worker.on( 'close', this.onClose.bind( this ) );
+	private constructor( private readonly worker: ChildProcess, public readonly home: string ) {}
+
+	on( event: 'data',  listener: ( data: Buffer) => void    ): void;
+	on( event: 'error', listener: ( error: Error) => void    ): void;
+	on( event: 'end',   listener: () => void                 ): void;
+	on( event: string,  listener: ( ...args: any[] ) => void ): void {
+		this.worker.stdout.on( event, listener );
 	}
 
-	private onStdOut( data: Buffer ) {
-		this.buffer = Buffer.concat( [ this.buffer, data ] );
-		const [ message, rest ] = msgpack.decode( this.buffer, true );
-
-		console.log( data.toString() );
+	public get stderr() {
+		return {
+			on: ( event: 'data', listener: ( data: Buffer ) => void ) => {
+				this.worker.stderr.on( event, listener );
+			}
+		};
 	}
 
-	private onStdErr( data: Buffer ) {
-		console.log( data.toString() );
+	write( data: Buffer ): void {
+		this.worker.stdin.write( data );
 	}
 
-	private onClose( code: number ) {
-		console.log( `child process exited with code ${code}` );
-	}*/
+	close(): void {
+		this.worker.kill();
+	}
 
 }
 
 suite( 'Workers', () => {
-	test( 'getinfo test', () => {
-		const command = 'python3';
-        const args = [ __dirname + '/../../out/worker.zip' ];
+	test( 'getinfo test', async () => {
+		const localWorker = await LocalWorker.start( 'python3', [ 'out/worker.zip' ] );
+		const worker = new PonyWorker( localWorker );
 
-        const worker = spawn( command, args );
-		worker.stdout.on( 'data', ( data ) => {
-			console.log( data.toString() );
-		} );
-		worker.stderr.on( 'data', ( data ) => {
-			console.log( data.toString() );
-		} );
-		worker.on( 'close', ( code ) => {
-			console.log( `child process exited with code ${code}` );
-		} );
+		const info = await worker.getServerInfo();
 
-		worker.stdin.write( msgpack.encode( [ Opcode.GET_SERVER_INFO, {} ] ) );
-
-		assert.ok( true );
+		assert.strictEqual( info.home, localWorker.home );
 	} );
 });

@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { PonyWorker, ParcelType, Opcode, ErrorCode } from "./PonyWorker";
 import { decode as msgpackDecode } from "msgpack-lite";
 import { Connection } from "./Connection";
-import { Channel } from "ssh2";
 import { WorkerError } from './WorkerError';
 import { log } from './Log';
+import { Channel } from 'ssh2';
 
 enum ChangeType {
     CHANGED = 0x01,

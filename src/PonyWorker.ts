@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { encode as msgpackEncode, decode as msgpackDecode } from "msgpack-lite";
 import { WorkerError } from "./WorkerError";
-import { Channel } from "ssh2";
 import crypto = require( 'crypto' );
 import DiffMatchPatch = require( 'diff-match-patch' );
 import { EventEmitter } from 'events';
@@ -77,15 +76,25 @@ interface ParcelChunk {
 type ParcelConsumer = ( type: ParcelType, body: Buffer ) => boolean;
 type BodyCB = ( data: Buffer ) => void;
 
+// Testable interface - describes everything we use from the SSH2 channel class.
+export interface ChannelInterface {
+    on( event: 'data',  listener: ( data: Buffer ) => void ): void;
+    on( event: 'error', listener: ( error: Error ) => void ): void;
+    on( event: 'end',   listener: () => void ): void;
+    stderr: { on( event: 'data', listener: ( data: Buffer ) => void ): void };
+    write( data: Buffer ): void;
+    close(): void;
+};
+
 export class PonyWorker extends EventEmitter {
 
-    private channel?: Channel;
+    private channel?: ChannelInterface;
     private readBuffer : Buffer;
     private bufferMsgSize: number | undefined;
     private parcelConsumer: ParcelConsumer | undefined;
     private closing: boolean;
 
-    public constructor( channel: Channel ) {
+    public constructor( channel: ChannelInterface ) {
         super();
 
         this.channel = channel;

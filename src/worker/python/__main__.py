@@ -10,6 +10,12 @@ from libc import get_libc
 from watcher import Watcher
 
 import traceback
+
+# Create ~/.pony-ssh dir if it doesn't exist.
+pony_ssh_home = os.path.expanduser( '~/.pony-ssh' )
+if not os.path.exists( pony_ssh_home ):
+    os.makedirs( pony_ssh_home )
+
 logging.basicConfig(filename=os.path.expanduser('~/.pony-ssh/debug.log'), level=logging.DEBUG)
 
 def run_watcher():
