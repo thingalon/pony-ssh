@@ -1,58 +1,69 @@
 import * as assert from 'assert';
-import { ChildProcess, spawn } from 'child_process';
-import { ChannelInterface, Opcode, PonyWorker } from '../PonyWorker';
-import path from 'path';
-import os from 'os';
-import { mkdirp } from 'mkdirp';
+import { PonyWorker } from '../PonyWorker';
+import { LocalWorker } from './lib/LocalWorker';
+import { promises as fs } from 'fs';
 // import * as vscode from 'vscode';
 // import * as myExtension from '../../extension';
 
-class LocalWorker implements ChannelInterface {
-
-	public static async start( command: string, args: string[] ) {
-		const home = path.join( os.tmpdir(), `pony-ssh-test-${ Date.now() }` );
-		await mkdirp( home );
-
-		const env = { ...process.env, HOME: home };
-		const worker = spawn( command, args, { env } );
-
-		return new LocalWorker( worker, home );
-	}
-
-	private constructor( private readonly worker: ChildProcess, public readonly home: string ) {}
-
-	on( event: 'data',  listener: ( data: Buffer) => void    ): void;
-	on( event: 'error', listener: ( error: Error) => void    ): void;
-	on( event: 'end',   listener: () => void                 ): void;
-	on( event: string,  listener: ( ...args: any[] ) => void ): void {
-		this.worker.stdout.on( event, listener );
-	}
-
-	public get stderr() {
-		return {
-			on: ( event: 'data', listener: ( data: Buffer ) => void ) => {
-				this.worker.stderr.on( event, listener );
-			}
-		};
-	}
-
-	write( data: Buffer ): void {
-		this.worker.stdin.write( data );
-	}
-
-	close(): void {
-		this.worker.kill();
-	}
-
-}
-
 suite( 'Workers', () => {
-	test( 'getinfo test', async () => {
-		const localWorker = await LocalWorker.start( 'python3', [ 'out/worker.zip' ] );
-		const worker = new PonyWorker( localWorker );
 
-		const info = await worker.getServerInfo();
-
-		assert.strictEqual( info.home, localWorker.home );
+	suiteTeardown( async () => {
+		await LocalWorker.cleanup();
 	} );
+
+	test( 'getinfo test', async () => {
+		const localWorkers = await Promise.all( [ LocalWorker.startPython(), LocalWorker.startPhp() ] );
+
+		for ( const lw of localWorkers ) {
+			const worker = new PonyWorker( lw );
+			const infoA  = await worker.getServerInfo();
+			const infoB  = await worker.getServerInfo();
+			
+			assert.strictEqual( infoA.home, lw.home );
+			assert.strictEqual( infoB.home, lw.home );
+
+			assert.strictEqual( infoA.cacheKey, infoB.cacheKey );
+			assert.strictEqual( typeof infoA.cacheKey, 'string' );
+			assert.strictEqual( infoA.cacheKey.length, 64 );
+
+			assert.strictEqual( infoA.newCacheKey, true );
+			assert.strictEqual( infoB.newCacheKey, false );
+		}
+	} );
+
+	test( 'ls test', async () => {
+		const localWorkers = await Promise.all( [ LocalWorker.startPython(), LocalWorker.startPhp() ] );
+
+		for ( const lw of localWorkers ) {
+			const worker = new PonyWorker( lw );
+			const result = await worker.ls( '~/' );
+
+			//assert.strictEqual( JSON.stringify( result ), 'hello' );
+			console.log( JSON.stringify( result ) );
+
+			assert.ok( Array.isArray( result.stat ), 'self stat should be an array' );
+			assert.strictEqual( result.stat[0], 2 );
+
+			assert.strictEqual( typeof result.dirs, 'object', 'dirs should be an object' );
+			assert.strictEqual( Object.keys( result.dirs ).length, 2 );
+			assert.strictEqual( typeof result.dirs['.'], 'object', 'dir . should be an object' );
+			assert.ok( Array.isArray( result.dirs['.']['.pony-ssh'] ), '.lpony-ssh should be an array' );
+			assert.strictEqual( result.dirs['.']['.pony-ssh'][0], 2 );
+		}
+	} );
+
+	test( 'file read test', async () => {
+		const localWorkers = await Promise.all( [ LocalWorker.startPython(), LocalWorker.startPhp() ] );
+
+		for ( const lw of localWorkers ) {
+			const worker  = new PonyWorker( lw );
+			const content = 'Y HALLO THAR!!';
+			await fs.writeFile( lw.home + '/my-file.txt', content );
+
+			const read = await worker.readFile( '~/my-file.txt' );
+			assert.ok( read instanceof Buffer );
+			assert.ok( Buffer.from( content ).equals( read ) );
+		}
+	} );
+
 });

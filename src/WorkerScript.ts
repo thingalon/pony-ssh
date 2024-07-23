@@ -23,11 +23,11 @@ export class WorkerScript {
         return this.data;
     }
 
-    private static workerScriptPromise:Promise<WorkerScript>;
-    public static async load() {
-        if ( ! this.workerScriptPromise ) {
-            this.workerScriptPromise = new Promise( ( resolve, reject ) => {
-                const scriptPath = path.join( __dirname, 'worker.zip' );
+    private static workerScriptPromise: { [ lang: string ]: Promise<WorkerScript> } = {};
+    public static async load( lang: string ) {
+        if ( ! this.workerScriptPromise[ lang ] ) {
+            this.workerScriptPromise[ lang ] = new Promise( ( resolve, reject ) => {
+                const scriptPath = path.join( __dirname, 'php' === lang ? 'worker.phar' : 'worker.zip' );
                 // Load worker script
                 fs.readFile( scriptPath, ( err, data ) => {
                     if ( err ) {
@@ -39,7 +39,7 @@ export class WorkerScript {
             } );
         }
 
-        return this.workerScriptPromise;
+        return this.workerScriptPromise[ lang ];
     }
 
 }

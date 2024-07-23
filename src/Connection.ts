@@ -14,6 +14,24 @@ import { log, LoggingLevel } from "./Log";
 import { ensureError } from "./tools";
 const shellEscape = require( 'shell-escape' );
 
+const phpPilotCommand = ( phpCommand: string ) => '' +
+    'F=~/.pony-ssh/worker.phar;' +
+    'M="ponyssh-mar""ker";' +
+    `if command -v ${phpCommand} >/dev/null;then ` +
+        'if [ -e $F ];then ' +
+            'if [ $( which md5 ) ];then ' +
+                'H=`cat $F|md5`;' +
+            'else ' +
+                'H=`cat $F|md5sum`;' +
+            'fi;' +
+            'echo "[$M h $H]";' +
+        'else ' +
+            'echo "[$M n]";' +
+        'fi;' +
+    'else ' +
+        'echo "[$M p]";' +
+    'fi;';
+
 const pilotCommand = ( pythonCommand: string ) => '' +
     'F=~/.pony-ssh/worker.zip;' +
     'M="ponyssh-mar""ker";' +
@@ -31,6 +49,15 @@ const pilotCommand = ( pythonCommand: string ) => '' +
     'else ' +
         'echo "[$M p]";' +
     'fi;';
+
+const phpUploadCommand = '' +
+    '$d=getenv("HOME")."/.pony-ssh";' +
+    '$of="$d/worker.phar";' +
+    '$id=base64_decode(file_get_contents("php://stdin"));' +
+    'if(!is_dir($d))mkdir($d);' +
+    'file_put_contents($of,$id);' +
+    '$oh=fopen($of,"wb");' +
+    'fwrite($oh,$id);';
 
 const uploadCommand = '' +
     'import os,sys;' +
@@ -101,6 +128,7 @@ export class Connection extends EventEmitter {
             // If any part of connecting fails, clean up leftovers.
             StatusTicker.showMessage( 'Error connecting to ' + this.host.name + '!' );
 
+            console.error( err );
             log.error( 'Error connecting to ' + this.host.name + ': ', err );
             this.emit( 'error', this, err );
             this.close();
@@ -300,7 +328,12 @@ export class Connection extends EventEmitter {
     private async verifyWorkerScript(): Promise<boolean> {
         return new Promise( ( resolve, reject ) => {
             log.debug( 'Verifying worker script' );
-            const command = this.wrapShellCommand( [ pilotCommand( this.pythonCommand() ) ] );
+            const command = this.wrapShellCommand( [
+                this.usePhp()
+                    ? phpPilotCommand( this.phpCommand() )
+                    : pilotCommand( this.pythonCommand() )
+            ] );
+            log.debug( command );
             this.client.exec( command, ( err, channel ) => {
                 if ( err ) {
                     return reject( err );
@@ -341,7 +374,7 @@ export class Connection extends EventEmitter {
         }
 
         // Do we need to upload the Worker script?
-        const workerScript = await WorkerScript.load();
+        const workerScript = await WorkerScript.load( this.usePhp() ? 'php' : 'python' );
         return ( 'h' === response && hash === workerScript.getHash() );
     }
 
@@ -350,6 +383,18 @@ export class Connection extends EventEmitter {
             return this.config.python;
         } else {
             return 'python';
+        }
+    }
+
+    private usePhp() {
+        return !! this.config.php;
+    }
+
+    private phpCommand() {
+        if ( this.config.php ) {
+            return this.config.php;
+        } else {
+            return 'php';
         }
     }
 
@@ -365,7 +410,11 @@ export class Connection extends EventEmitter {
 
     private async uploadWorkerScript(): Promise< void > {
         return new Promise( ( resolve, reject ) => {
-            const pythonCommand = shellEscape( [ this.pythonCommand(), '-c', uploadCommand ] );
+            const pythonCommand = shellEscape( 
+                this.usePhp()
+                    ? [ this.phpCommand(),    '-r', phpUploadCommand ]
+                    : [ this.pythonCommand(), '-c', uploadCommand    ]
+            );
             const shellCommand = this.wrapShellCommand( [ pythonCommand ] );
 
             log.debug( 'Opening upload channel for worker script' );
@@ -395,8 +444,12 @@ export class Connection extends EventEmitter {
 
                 // Send worker script up via STDIN.
                 log.debug( 'Uploading worker script' );
-                const workerScript = await WorkerScript.load();
-                channel.stdin.write( workerScript.getData() );
+                const workerScript = await WorkerScript.load( this.usePhp() ? 'php' : 'python' );
+                channel.stdin.write( 
+                    this.usePhp()
+                        ? workerScript.getData().toString( 'base64' )
+                        : workerScript.getData()
+                );
                 channel.stdin.end();
             } );
         } );
@@ -404,8 +457,13 @@ export class Connection extends EventEmitter {
 
     private async startWorkerChannel( args: string[] = [] ): Promise<Channel> {
         return new Promise<Channel>( ( resolve, reject ) => {
-            const pythonCommand = shellEscape( [ this.pythonCommand() ] ) + ' ~/.pony-ssh/worker.zip ' + shellEscape( args );
-            const shellCommand = this.wrapShellCommand( [ pythonCommand ] );
+            const shellCommand = this.wrapShellCommand( [
+                this.usePhp()
+                    ? shellEscape( [ this.phpCommand()    ] ) + ' ~/.pony-ssh/worker.phar ' + shellEscape( args )
+                    : shellEscape( [ this.pythonCommand() ] ) + ' ~/.pony-ssh/worker.zip ' +  shellEscape( args )
+            ] );
+
+            log.debug( shellCommand );
 
             this.client.exec( shellCommand, async ( err, channel ) => {
                 if ( err ) {

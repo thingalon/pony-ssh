@@ -17,6 +17,7 @@ export interface HostConfig {
     privateKeyFile?: string;
     passphrase?: string | boolean;
     python?: string;
+    php?: string;
     shell?: string;
 }
 
