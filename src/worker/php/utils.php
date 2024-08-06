@@ -12,8 +12,23 @@ function expand_user_path( $path ) {
 	}
 }
 
+function get_home() {
+	static $home = null;
+
+	if ( $home === null ) {
+		$home = getenv( 'HOME' );
+		if ( empty( $home ) ) {
+			$home = getcwd();
+		}
+	}
+}
+
 function home_path( $path = '' ) {
 	$home_dir  = getenv( 'HOME' );
+	if ( empty( $home_dir ) ) {
+		$home_dir = getcwd();
+	}
+
 	$full_path = $home_dir . '/' . $path;
 
 	if ( substr( $full_path, strlen( $full_path ) - 1 ) === '/' ) {

@@ -14,14 +14,38 @@ $parcel_types = [
  * Generator function that returns messages from stdin.
  */
 function prepare_message_reader() {
-	while ( true ) {
-		$message_size = fread_msgpack_number( STDIN );
-		$message = fread( STDIN, $message_size );
-		if ( strlen( $message ) < $message_size ) {
-			throw new Exception( "Failed to read message." );
-		}
+	stream_set_blocking( STDIN, false );
+	$buffer = '';
 
-		yield msgpack_read( $message );
+	while ( true ) {
+		$read = [ STDIN ];
+		$write = $except = NULL;
+
+		// Wait for input.
+		if ( stream_select( $read, $write, $except, 0, 200000 ) ) {
+			$input = fread( STDIN, 1024 );
+			if ( $input === false ) {
+				break;
+			}
+
+			if ( $input !== '' ) {
+				$buffer .= $input;
+				if ( strlen( $buffer ) >= 10 ) {
+					$cursor         = 0;
+					$message_length = _msgpack_read( $buffer, $cursor );
+					$message        = substr( $buffer, $cursor );
+
+					if ( strlen( $message ) < $message_length ) {
+						$message .= fread( STDIN, $message_length - strlen( $message ) );
+					}
+
+					error_log( 'Got message' );
+					yield msgpack_read( $message );
+
+					$buffer = substr( $message, $message_length );
+				}
+			}
+		}
 	}
 }
 
@@ -33,6 +57,7 @@ function send_response_header( $response ) {
 
 	$packed = msgpack_pack( (object) $response );
 	send_parcel( $parcel_types['HEADER'], $packed );
+	error_log( 'sent header' );
 }
 
 /**
@@ -249,6 +274,8 @@ function _msgpack_read( $data, &$cursor ) {
 		
 		case 0xc4:  // bin8
 			$length = ord( $data[ $cursor ] );
+			$cursor++;
+
 			return msgpack_read_string( $data, $cursor, $length );
 
 		case 0xc5:  // bin16
@@ -295,6 +322,8 @@ function _msgpack_read( $data, &$cursor ) {
 
 		case 0xd9:  // str8
 			$length = ord( $data[ $cursor ] );
+			$cursor += 1;
+
 			return msgpack_read_string( $data, $cursor, $length );
 		
 		case 0xda:  // str16
@@ -368,6 +397,7 @@ function msgpack_read_string( $data, &$cursor, $length ) {
  * Read a uint16 from msgpack data in $data and return it.
  */
 function msgpack_read_uint16( $data, &$cursor ) {
+	$x = substr( $data, $cursor, 2 );
 	$number = unpack( 'n', substr( $data, $cursor, 2 ) )[1];
 	$cursor += 2;
 

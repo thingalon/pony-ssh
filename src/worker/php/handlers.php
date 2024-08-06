@@ -12,6 +12,23 @@ $handlers = [
 	0x09 => 'handle_write_diff',
 ];
 
+define( 'DIFF_UNCHANGED', 0x00 );
+define( 'DIFF_INSERTED',  0x01 );
+define( 'DIFF_REMOVED',   0x02 );
+
+function safe_define( $symbol, $value ) {
+	if ( ! defined( $symbol ) ) {
+		define( $symbol, $value );
+	}
+}
+
+safe_define( 'ENOENT', 2  );
+safe_define( 'EIO',    5  );
+safe_define( 'EACCES', 13 );
+safe_define( 'EEXIST', 17 );
+safe_define( 'EISDIR', 21 );
+safe_define( 'EINVAL', 22 );
+
 function handle_message( $opcode, $args ) {
 	global $handlers;
 
@@ -114,7 +131,7 @@ function handle_read_file( $args ) {
 
 	// If a hash has been supplied, check if it matches. If so, shortcut download...
 	if ( isset( $args['cachedHash'] ) ) {
-		$hash = md5_file( $args['path'] );
+		$hash = md5_file( $path );
 		if ( $hash === $args['cachedHash'] ) {
 			send_response_header( (object) [ 'hashMatch' => true ] );
 			return;
@@ -130,6 +147,9 @@ function handle_read_file( $args ) {
 	}
 
 	send_response_header( (object) [ 'length' => $size ] );
+	if ( $size === 0 ) {
+		return;
+	}
 
 	$chunk_size = 200 * 1024;
 	while ( true ) {
@@ -147,19 +167,70 @@ function handle_read_file( $args ) {
 }
 
 function handle_write_file( $args ) {
+	$path = expand_user_path( $args['path'] );
 
+	$exists = file_exists( $path );
+	if ( $exists && ! $args['overwrite'] ) {
+		send_error( EEXIST, 'File already exists' );
+		return;
+	} else if ( ! $exists && ! $args['create'] ) {
+		send_error( ENOENT, 'File not found ' . json_encode( $args ) );
+		return;
+	}
+
+	$result = file_put_contents( $path, $args['data'] );
+	if ( false === $result ) {
+		send_error( EACCES, 'Access denied' );
+		return;
+	}
+
+    send_response_header( [] );
 }
 
 function handle_mkdir( $args ) {
+	$path = expand_user_path( $args['path'] );
 
+	$result = @mkdir( $path );
+	if ( ! $result ) {
+		send_error( EACCES, 'Access denied' );
+		return;
+	}
+
+    send_response_header( [] );
 }
 
 function handle_delete( $args ) {
+	$path = expand_user_path( $args['path'] );
 
+	/** @todo once this is more stable, allow tree deletes. */
+
+	$result = @unlink( $path );
+	if ( ! $result ) {
+		send_error( EACCES, 'Access denied' );
+		return;
+	}
+
+	send_response_header( [] );
 }
 
 function handle_rename( $args ) {
+	$from = expand_user_path( $args['from'] );
+	$to   = expand_user_path( $args['to'] );
 
+	if ( file_exists( $to ) ) {
+		if ( $args['overwrite'] ) {
+			if ( ! @unlink( $to ) ) {
+				send_error( EACCES, 'Access denied' );
+				return;
+			}
+		} else {
+			send_error( EEXIST, 'File already exists' );
+		}
+	}
+
+	@rename( $from, $to );
+
+	send_response_header( [] );
 }
 
 function handle_expand_path( $args ) {
@@ -174,5 +245,62 @@ function handle_expand_path( $args ) {
 }
 
 function handle_write_diff( $args ) {
+	$path = expand_user_path( $args['path'] );
 
+	if ( ! file_exists( $path ) ) {
+		send_error( ENOENT, 'File not found' );
+		return;
+	}
+
+	$original_data = file_get_contents( $path );
+	if ( $original_data === false ) {
+		send_error( EACCES, 'Access denied' );
+		return;
+	}
+
+	$original_hash = md5( $original_data );
+	if ( $original_hash !== $args['hashBefore'] ) {
+		send_error( EIO, 'File hash does not match client cached value: ' . $args['hashBefore'] . ' vs ' . $original_hash );
+		return;
+	}
+
+	// Apply diff. Array of [ type, args, type, args ].
+	$updated_data = '';
+	$read_cursor  = 0;
+	$diff         = $args['diff'];
+
+	for ( $i = 0; $i < count( $diff ); $i += 2 ) {
+		$action      = $diff[ $i ];
+		$action_data = $diff[ $i + 1 ];
+
+		switch ( $action ) {
+			case DIFF_INSERTED:
+				$updated_data .= $action_data;
+				break;
+
+			case DIFF_REMOVED:
+				$read_cursor += $action_data;
+				break;
+			
+			default:
+				$updated_data .= substr( $original_data, $read_cursor, $action_data );
+				$read_cursor  += $action_data;
+				break;
+		}
+	}
+
+	// Check the hash after the diff update.
+	$updated_hash = md5( $updated_data );
+	if ( $updated_hash !== $args['hashAfter'] ) {
+		send_error( EINVAL, 'File hash after changes applied does not match expected' );
+		return;
+	}
+
+	// Write the update.
+	if ( ! @file_put_contents( $path, $updated_data ) ) {
+		send_error( EACCES, 'Access denied: ' . $path );
+		return;
+	}
+
+	send_response_header( [] );
 }

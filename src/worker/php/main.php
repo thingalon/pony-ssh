@@ -5,8 +5,6 @@ require_once __DIR__ . '/log.php';
 require_once __DIR__ . '/protocol.php';
 require_once __DIR__ . '/utils.php';
 
-fprintf( STDERR, "Launching php worker.\n" );
-
 // Make sure ~/.pony-ssh dir exists.
 if ( ! is_dir( pony_path() ) ) {
 	if ( ! mkdir( pony_path() ) ) {
@@ -25,6 +23,7 @@ function run_worker() {
 			}
 
 			list( $opcode, $args ) = $message;
+			error_log( 'Got opcode ' . $opcode );
 			handle_message( $opcode, $args );
 		} catch ( Exception $e ) {
 			send_error( 22, $e->getMessage() );

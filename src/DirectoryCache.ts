@@ -37,7 +37,7 @@ export class DirectoryCache {
         this.fileCacheBase = fileCacheBase;
 
         this.statCache = new NodeCache( {
-            stdTTL: 10,
+            stdTTL: 60,
             checkperiod: 120,
         } );
 

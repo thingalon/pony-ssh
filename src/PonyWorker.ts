@@ -6,6 +6,7 @@ import DiffMatchPatch = require( 'diff-match-patch' );
 import { EventEmitter } from 'events';
 import { log } from './Log';
 import { ensureError } from './tools';
+import { Channel } from 'ssh2';
 
 export const HashMatch = Symbol( 'HashMatch' );
 
@@ -129,6 +130,7 @@ export class PonyWorker extends EventEmitter {
         } );
 
         if ( header.hashMatch ) {
+            console.log( 'opening based on hashmatch' );
             return HashMatch;
         }
 
@@ -219,6 +221,8 @@ export class PonyWorker extends EventEmitter {
                 // First byte defines parcel type. Make sure it looks valid.
                 const parcelType = this.readBuffer[0] as ParcelType;
                 if ( parcelType > ParcelType.CHANGE_NOTICE ) {
+                    // I guess read whatever is available.
+                    log.debug( this.readBuffer.toString() );
                     throw new Error( 'Invalid parcel type: ' + parcelType );
                 }
 
@@ -284,6 +288,8 @@ export class PonyWorker extends EventEmitter {
             let header: ParcelChunk | undefined = undefined;
             let bodyLength: number = 0;
 
+            const before = Date.now();
+
             this.setParcelConsumer( ( type: ParcelType, data: Buffer ): boolean => {
                 switch ( type ) {
                     case ParcelType.ERROR:
@@ -292,6 +298,7 @@ export class PonyWorker extends EventEmitter {
                         return false;
 
                     case ParcelType.HEADER:
+                        console.log( 'Got a header for ' + opcode + ' in ' + ( Date.now() - before ) );
                         header = msgpackDecode( data );
                         if ( header && ! header.length ) {
                             // Header with no body. We're done here.
@@ -325,6 +332,7 @@ export class PonyWorker extends EventEmitter {
                 }
             } );
 
+            console.log( 'Sending ' + opcode + ' ' + JSON.stringify( args ) );
             this.sendMessage( opcode, args );
         } );
     }
@@ -347,7 +355,13 @@ export class PonyWorker extends EventEmitter {
     }
 
     private packMessage( opcode: Opcode, args: any ) {
-        const packed = msgpackEncode( [ opcode, args ] );
+        let packed = msgpackEncode( [ opcode, args ] );
+        if ( packed.length < 16 ) {
+            const padded = Buffer.alloc( 16 );
+            packed.copy( padded );
+            packed = padded;
+        }
+
         const header = msgpackEncode( packed.length );
         return Buffer.concat( [ header, packed ] );
     }

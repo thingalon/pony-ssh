@@ -110,6 +110,7 @@ export class Host {
         const stat = this.directoryCache.getStat( remotePath );
         if ( ! stat ) {
             // We should never reach this point. It should fail in the stop before.
+            console.log( remotePath );
             throw new Error( 'Stat not in cache after successful listing' );
         }
 
@@ -117,6 +118,10 @@ export class Host {
     }
 
     public async ls( priority: number, remotePath: string ) : Promise<[string, vscode.FileType][]> {
+        if ( remotePath.endsWith( '.vscode/settings.json' ) || remotePath.endsWith( '.vscode/tasks.json' ) ) {
+            throw vscode.FileSystemError.FileNotFound( 'Not found' );
+        }
+
         const cachedListing = this.directoryCache.getListing( remotePath );
         if ( cachedListing ) {
             return cachedListing!;
@@ -134,6 +139,10 @@ export class Host {
     }
 
     public async readFile( priority: number, remotePath: string ): Promise<Uint8Array> {
+        if ( remotePath.endsWith( '.vscode/settings.json' ) || remotePath.endsWith( '.vscode/tasks.json' ) ) {
+            throw vscode.FileSystemError.FileNotFound( 'Not found' );
+        }
+
         const connection = await this.getConnection();
 
         const cachedContent = await this.directoryCache.getFile( remotePath, true );

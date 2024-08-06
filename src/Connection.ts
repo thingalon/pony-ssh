@@ -494,7 +494,7 @@ export class Connection extends EventEmitter {
     }
 
     private async startSecondaryWorkers() {
-        for ( let i = 0; i < 4; i++ ) {
+        for ( let i = 0; i < 1; i++ ) {
             try {
                 const channel = await this.startWorkerChannel();
                 const worker = new PonyWorker( channel );
@@ -506,6 +506,8 @@ export class Connection extends EventEmitter {
     }
 
     private async startWatcher() {
+        return;
+        /*
         try {
             const channel = await this.startWorkerChannel( [ 'watcher' ] );
             this.watchWorker = new WatchWorker( this, channel );
@@ -520,7 +522,7 @@ export class Connection extends EventEmitter {
             await Promise.all( promises );
         } catch ( err ) {
             log.warn( 'Failed to open worker for watching file changes: ', ensureError( err ).message );
-        }
+        }*/
     }
 
 }
