@@ -38,9 +38,6 @@ suite( 'Workers', () => {
 			const worker = new PonyWorker( lw );
 			const result = await worker.ls( '~/' );
 
-			//assert.strictEqual( JSON.stringify( result ), 'hello' );
-			console.log( JSON.stringify( result ) );
-
 			assert.ok( Array.isArray( result.stat ), 'self stat should be an array' );
 			assert.strictEqual( result.stat[0], 2 );
 
@@ -63,6 +60,25 @@ suite( 'Workers', () => {
 			const read = await worker.readFile( '~/my-file.txt' );
 			assert.ok( read instanceof Buffer );
 			assert.ok( Buffer.from( content ).equals( read ) );
+		}
+	} );
+
+	test( 'file write test', async () => {
+		const localWorkers = await Promise.all( [ /*LocalWorker.startPython(),*/ LocalWorker.startPhp() ] );
+		const documents = {
+			short: 'Y HALLO THAR!!',
+			long:  'long text is '.repeat( 2000 ),
+		};
+
+		for ( const lw of localWorkers ) {
+			const worker  = new PonyWorker( lw );
+
+			for ( const [ name, content ] of Object.entries( documents ) ) {
+				const response = await worker.writeFile( '~/' + name + '.txt', Buffer.from( content ), { create: true, overwrite: false } );
+				console.log( response );
+				const read = await fs.readFile( lw.home + '/' + name + '.txt' );
+				assert.ok( Buffer.from( content ).equals( read ) );
+			}
 		}
 	} );
 

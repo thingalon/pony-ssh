@@ -23,7 +23,6 @@ function run_worker() {
 			}
 
 			list( $opcode, $args ) = $message;
-			error_log( 'Got opcode ' . $opcode );
 			handle_message( $opcode, $args );
 		} catch ( Exception $e ) {
 			send_error( 22, $e->getMessage() );

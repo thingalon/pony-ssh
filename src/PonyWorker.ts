@@ -298,7 +298,6 @@ export class PonyWorker extends EventEmitter {
                         return false;
 
                     case ParcelType.HEADER:
-                        console.log( 'Got a header for ' + opcode + ' in ' + ( Date.now() - before ) );
                         header = msgpackDecode( data );
                         if ( header && ! header.length ) {
                             // Header with no body. We're done here.
@@ -332,7 +331,6 @@ export class PonyWorker extends EventEmitter {
                 }
             } );
 
-            console.log( 'Sending ' + opcode + ' ' + JSON.stringify( args ) );
             this.sendMessage( opcode, args );
         } );
     }
@@ -355,13 +353,7 @@ export class PonyWorker extends EventEmitter {
     }
 
     private packMessage( opcode: Opcode, args: any ) {
-        let packed = msgpackEncode( [ opcode, args ] );
-        if ( packed.length < 16 ) {
-            const padded = Buffer.alloc( 16 );
-            packed.copy( padded );
-            packed = padded;
-        }
-
+        const packed = msgpackEncode( [ opcode, args ] );
         const header = msgpackEncode( packed.length );
         return Buffer.concat( [ header, packed ] );
     }

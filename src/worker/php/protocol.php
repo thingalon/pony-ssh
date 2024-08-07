@@ -14,38 +14,15 @@ $parcel_types = [
  * Generator function that returns messages from stdin.
  */
 function prepare_message_reader() {
-	stream_set_blocking( STDIN, false );
-	$buffer = '';
-
 	while ( true ) {
-		$read = [ STDIN ];
-		$write = $except = NULL;
-
-		// Wait for input.
-		if ( stream_select( $read, $write, $except, 0, 200000 ) ) {
-			$input = fread( STDIN, 1024 );
-			if ( $input === false ) {
-				break;
-			}
-
-			if ( $input !== '' ) {
-				$buffer .= $input;
-				if ( strlen( $buffer ) >= 10 ) {
-					$cursor         = 0;
-					$message_length = _msgpack_read( $buffer, $cursor );
-					$message        = substr( $buffer, $cursor );
-
-					if ( strlen( $message ) < $message_length ) {
-						$message .= fread( STDIN, $message_length - strlen( $message ) );
-					}
-
-					error_log( 'Got message' );
-					yield msgpack_read( $message );
-
-					$buffer = substr( $message, $message_length );
-				}
-			}
+		$message_size = fread_msgpack_number( STDIN );
+		$message = '';
+		while ( strlen( $message ) < $message_size ) {
+			$wanted = $message_size - strlen( $message );
+			$message .= fread( STDIN, $wanted );
 		}
+
+		yield msgpack_read( $message );
 	}
 }
 
@@ -57,7 +34,6 @@ function send_response_header( $response ) {
 
 	$packed = msgpack_pack( (object) $response );
 	send_parcel( $parcel_types['HEADER'], $packed );
-	error_log( 'sent header' );
 }
 
 /**
