@@ -64,7 +64,7 @@ suite( 'Workers', () => {
 	} );
 
 	test( 'file write test', async () => {
-		const localWorkers = await Promise.all( [ /*LocalWorker.startPython(),*/ LocalWorker.startPhp() ] );
+		const localWorkers = await Promise.all( [ LocalWorker.startPython(), LocalWorker.startPhp() ] );
 		const documents = {
 			short: 'Y HALLO THAR!!',
 			long:  'long text is '.repeat( 2000 ),
@@ -79,6 +79,22 @@ suite( 'Workers', () => {
 				const read = await fs.readFile( lw.home + '/' + name + '.txt' );
 				assert.ok( Buffer.from( content ).equals( read ) );
 			}
+		}
+	} );
+
+	test( 'mkdir test', async () => {
+		const localWorkers = await Promise.all( [ LocalWorker.startPython(), LocalWorker.startPhp() ] );
+
+		for ( const lw of localWorkers ) {
+			const worker = new PonyWorker( lw );
+
+			await worker.mkdir( '~/my-dir' );
+			const stata = await fs.stat( lw.home + '/my-dir' );
+			assert.ok( stata.isDirectory() );
+
+			await worker.mkdir( '~/my-dir/child' );
+			const statb = await fs.stat( lw.home + '/my-dir/child' );
+			assert.ok( statb.isDirectory() );
 		}
 	} );
 
