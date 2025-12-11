@@ -7,7 +7,7 @@ Pony SSH is a Visual Studio Code plugin which offers extremely fast file editing
 Pony SSH makes editing files over SSH fast and painless. It features:
 
 - **Blazingly fast** remote SSH editing
-- Automatic remote **filesystem watching**; changes to your remote filesystem are reflected locally automatically
+- Automatic remote **filesystem watching**; changes to your remote filesystem are reflected locally automatically by a Python script
 - **Encrypted local caching** for extremely fast and secure file access
 
 ## Requirements
